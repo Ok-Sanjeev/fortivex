@@ -1,9 +1,10 @@
 /**
- * Barricade PWA Service Worker
- * Enables 100% offline gameplay and instant loading
+ * FORTIVEX Service Worker (sw.js)
+ * Cache version: fortivex-v2.0.0
+ * Network-First Strategy with immediate cache purge of legacy 'barricade-cache-v1'
  */
 
-const CACHE_NAME = 'barricade-cache-v1';
+const CACHE_NAME = 'fortivex-cache-v2.0.0';
 const ASSETS = [
     './',
     './index.html',
@@ -16,10 +17,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             return cache.addAll(ASSETS);
-        }).then(() => self.skipWaiting())
+        })
     );
 });
 
@@ -28,7 +30,9 @@ self.addEventListener('activate', (event) => {
         caches.keys().then((keys) => {
             return Promise.all(
                 keys.map((key) => {
+                    // Forcefully delete old barricade cache
                     if (key !== CACHE_NAME) {
+                        console.log('Purging legacy cache:', key);
                         return caches.delete(key);
                     }
                 })
@@ -37,34 +41,27 @@ self.addEventListener('activate', (event) => {
     );
 });
 
+// Network-First strategy: Always fetch freshest files from server first!
 self.addEventListener('fetch', (event) => {
-    // Only cache GET requests
     if (event.request.method !== 'GET') return;
 
-    event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                // Fetch in background to update cache for next time
-                fetch(event.request).then((networkResponse) => {
-                    if (networkResponse && networkResponse.status === 200) {
-                        caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(event.request, networkResponse);
-                        });
-                    }
-                }).catch(() => {});
-                return cachedResponse;
-            }
+    // Never cache API or websocket requests
+    if (event.request.url.includes('/api/')) return;
 
-            return fetch(event.request).then((networkResponse) => {
-                if (!networkResponse || networkResponse.status !== 200) {
-                    return networkResponse;
+    event.respondWith(
+        fetch(event.request)
+            .then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const responseClone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, responseClone);
+                    });
                 }
-                const responseToCache = networkResponse.clone();
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, responseToCache);
-                });
                 return networkResponse;
-            });
-        })
+            })
+            .catch(() => {
+                // Offline fallback
+                return caches.match(event.request);
+            })
     );
 });

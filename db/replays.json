@@ -70,5 +70,23 @@
       }
     ],
     "history": []
+  },
+  "match_1793803839023_rliciz": {
+    "matchId": "match_1793803839023_rliciz",
+    "initialState": {
+      "mode": "classic",
+      "walls": 10
+    },
+    "moves": [
+      {
+        "player": 1,
+        "move": {
+          "type": "move",
+          "x": 4,
+          "y": 7
+        }
+      }
+    ],
+    "history": []
   }
 }
