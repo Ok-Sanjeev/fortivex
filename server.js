@@ -5,10 +5,12 @@
  *   - Real-time WebSockets (ws) + transparent HTTP fallback
  *   - Server-Authoritative Game State Engine (validates every move before state updates)
  *   - Centralized Sequential Identity System (noob10001+)
- *   - 100 Configured Logical AI Profiles with automated ranked fallback
+ *   - 100 Persistent Logical AI Profiles in Database (noob10001 - noob10100)
+ *   - Public Custom Room Browser with real-time discovery and filters
  *   - Ranked Matchmaking with +30 Win / -30 Loss Elo rating updates
+ *   - Automatic AI Pool Fallback from the 100-bot database
+ *   - Human-only chat (AI automatic chat strictly disabled)
  *   - Full Match Replay archiving and Live Spectator broadcasting
- *   - In-game real-time sanitized chat
  */
 
 const http = require('http');
@@ -51,7 +53,7 @@ const matchedPairs = new Map();   // clientId -> match payload
 setInterval(() => {
     const now = Date.now();
 
-    // 1. Clean stale clients
+    // 1. Clean stale clients (20s timeout)
     for (const [id, c] of activeClients.entries()) {
         if (now - c.lastSeen > 20000) {
             activeClients.delete(id);
@@ -67,18 +69,22 @@ setInterval(() => {
     }
 
     // 3. Ranked Matchmaking AI Pool Fallback:
-    // If a human has waited > 5 seconds and no human opponent arrived, pair with a matching AI profile!
+    // If a human has waited >= 5 seconds and no human opponent arrived,
+    // automatically select an available AI profile from the 100-bot database!
     for (let i = rankedQueue.length - 1; i >= 0; i--) {
         const item = rankedQueue[i];
         if (now - item.joinedAt >= 5000) {
             rankedQueue.splice(i, 1);
-            const botProfile = getAiProfileForRating(item.rating);
+            const botProfile = db.getAiProfileForMatch(item.rating);
             const roomCode = 'FORT-R' + Math.floor(1000 + Math.random() * 9000);
 
             const room = createServerRoom({
                 code: roomCode,
+                title: `Ranked Match: ${item.username} vs ${botProfile.username}`,
+                isPublic: false,
                 hostName: item.username,
                 hostUserId: item.userId,
+                hostRating: item.rating,
                 settings: {
                     mode: 'classic',
                     gameplayMode: 'breaking',
@@ -88,7 +94,7 @@ setInterval(() => {
                     isRanked: true
                 },
                 p1: item.username,
-                p2: botProfile.displayName,
+                p2: botProfile.username, // Strictly noobXXXXX
                 isBotMatch: true,
                 botProfile
             });
@@ -98,18 +104,31 @@ setInterval(() => {
                 roomCode,
                 role: 1,
                 opponent: {
-                    username: botProfile.displayName,
+                    username: botProfile.username, // Strictly noobXXXXX
                     rating: botProfile.rating,
                     isBot: true,
                     difficulty: botProfile.difficulty,
-                    archetype: botProfile.archetype
+                    playstyle: botProfile.playstyle
                 }
             });
         }
     }
 }, 2000);
 
-function createServerRoom({ code, hostName, hostUserId, settings = {}, p1, p2 = null, isBotMatch = false, botProfile = null }) {
+function createServerRoom({
+    code,
+    title = null,
+    isPublic = true,
+    password = null,
+    hostName,
+    hostUserId = null,
+    hostRating = 1200,
+    settings = {},
+    p1,
+    p2 = null,
+    isBotMatch = false,
+    botProfile = null
+}) {
     const mode = settings.mode || 'classic';
     const maxPlayers = mode === 'koth' ? 4 : 2;
 
@@ -123,8 +142,13 @@ function createServerRoom({ code, hostName, hostUserId, settings = {}, p1, p2 = 
 
     const room = {
         code,
+        title: title || `${hostName}'s Arena`,
+        isPublic: isPublic !== false,
+        password: password || null,
+        hasPassword: !!password,
         hostName,
         hostUserId,
+        hostRating: hostRating || 1200,
         settings,
         maxPlayers,
         p1: p1 || hostName,
@@ -187,9 +211,31 @@ function sendJson(res, statusCode, data) {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
     });
     res.end(JSON.stringify(data));
+}
+
+function serializeRoom(room) {
+    return {
+        code: room.code,
+        title: room.title,
+        isPublic: room.isPublic,
+        hasPassword: !!room.password,
+        hostName: room.hostName,
+        hostRating: room.hostRating,
+        settings: room.settings,
+        maxPlayers: room.maxPlayers,
+        currentPlayers: (room.p1 ? 1 : 0) + (room.p2 ? 1 : 0) + (room.p3 ? 1 : 0) + (room.p4 ? 1 : 0),
+        p1: room.p1,
+        p2: room.p2,
+        p3: room.p3,
+        p4: room.p4,
+        status: room.status,
+        totalMoves: room.moves.length
+    };
 }
 
 // ==========================================
@@ -266,7 +312,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 6. Heartbeat & Live Stats
+    // 6. Platform Statistics (Clearly Separated Online Stats)
     if (req.method === 'POST' && reqPath === '/api/heartbeat') {
         parseJsonBody(req, (err, data) => {
             const clientId = data.clientId || clientIp;
@@ -278,10 +324,17 @@ const server = http.createServer((req, res) => {
                 roomCode: data.roomCode || null
             });
             const inGameCount = Array.from(activeClients.values()).filter(c => c.status === 'game').length;
+            const activeMatchesCount = Array.from(activeRooms.values()).filter(r => r.status === 'playing').length;
+            const publicRoomsCount = Array.from(activeRooms.values()).filter(r => r.isPublic && r.status === 'waiting').length;
+
             sendJson(res, 200, {
                 success: true,
                 onlineCount: Math.max(activeClients.size, 1),
-                inGameCount: inGameCount,
+                humanOnlineCount: Math.max(activeClients.size, 1),
+                aiAvailableCount: 100,
+                activeMatchesCount,
+                publicRoomsCount,
+                inGameCount,
                 roomsCount: activeRooms.size,
                 queueCount: rankedQueue.length
             });
@@ -291,16 +344,56 @@ const server = http.createServer((req, res) => {
 
     if (req.method === 'GET' && reqPath === '/api/stats') {
         const inGameCount = Array.from(activeClients.values()).filter(c => c.status === 'game').length;
+        const activeMatchesCount = Array.from(activeRooms.values()).filter(r => r.status === 'playing').length;
+        const publicRoomsCount = Array.from(activeRooms.values()).filter(r => r.isPublic && r.status === 'waiting').length;
+
         sendJson(res, 200, {
             onlineCount: Math.max(activeClients.size, 1),
-            inGameCount: inGameCount,
+            humanOnlineCount: Math.max(activeClients.size, 1),
+            aiAvailableCount: 100,
+            activeMatchesCount,
+            publicRoomsCount,
+            inGameCount,
             roomsCount: activeRooms.size,
             queueCount: rankedQueue.length
         });
         return;
     }
 
-    // 7. Ranked Matchmaking Queue
+    // 7. PUBLIC ROOM BROWSER ENDPOINT
+    if (req.method === 'GET' && reqPath === '/api/rooms/public') {
+        const publicList = [];
+        const modeFilter = parsedUrl.query.mode;
+        const gameplayFilter = parsedUrl.query.gameplay;
+
+        for (const [code, r] of activeRooms.entries()) {
+            if (r.isPublic && r.status === 'waiting' && !r.isBotMatch) {
+                if (modeFilter && modeFilter !== 'all' && r.settings.mode !== modeFilter) continue;
+                if (gameplayFilter && gameplayFilter !== 'all' && r.settings.gameplayMode !== gameplayFilter) continue;
+
+                publicList.push({
+                    code: r.code,
+                    title: r.title,
+                    hostName: r.hostName,
+                    hostRating: r.hostRating || 1200,
+                    mode: r.settings.mode || 'classic',
+                    gameplayMode: r.settings.gameplayMode || 'breaking',
+                    breakCost: r.settings.breakCost || 5,
+                    walls: r.settings.walls || 10,
+                    timeSec: r.settings.timeSec || 180,
+                    hasPassword: !!r.password,
+                    currentPlayers: (r.p1 ? 1 : 0) + (r.p2 ? 1 : 0) + (r.p3 ? 1 : 0) + (r.p4 ? 1 : 0),
+                    maxPlayers: r.maxPlayers,
+                    status: r.status,
+                    createdAt: r.createdAt
+                });
+            }
+        }
+        sendJson(res, 200, { success: true, rooms: publicList });
+        return;
+    }
+
+    // 8. Ranked Matchmaking Queue
     if (req.method === 'POST' && reqPath === '/api/matchmaking/join') {
         parseJsonBody(req, (err, data) => {
             if (err || !data.clientId) return sendJson(res, 400, { error: 'Missing clientId' });
@@ -320,8 +413,11 @@ const server = http.createServer((req, res) => {
 
                 const room = createServerRoom({
                     code: roomCode,
+                    title: `Ranked Match: ${opp.username} vs ${username}`,
+                    isPublic: false,
                     hostName: opp.username,
                     hostUserId: opp.userId,
+                    hostRating: opp.rating,
                     settings: {
                         mode: 'classic',
                         gameplayMode: 'breaking',
@@ -391,15 +487,22 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 8. Custom Room Creation
+    // 9. Custom Room Creation (Supports Public/Private and Optional Password)
     if (req.method === 'POST' && reqPath === '/api/rooms/create') {
         parseJsonBody(req, (err, data) => {
             if (err || !data.code) return sendJson(res, 400, { error: 'Missing room code' });
             const code = data.code.toUpperCase();
+            const hostUser = data.userId ? db.getUser(data.userId) : null;
+            const hostRating = hostUser ? hostUser.rating : 1200;
+
             const room = createServerRoom({
                 code,
+                title: data.title || `${data.hostName || 'Host'}'s Arena`,
+                isPublic: data.isPublic !== false,
+                password: data.password || null,
                 hostName: data.hostName || 'Host',
                 hostUserId: data.userId || null,
+                hostRating,
                 settings: data.settings || {},
                 p1: data.hostName || 'Host',
                 isBotMatch: false
@@ -409,7 +512,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 9. Join Room
+    // 10. Join Room (With Password Verification & Capacity Checks)
     if (req.method === 'POST' && reqPath === '/api/rooms/join') {
         parseJsonBody(req, (err, data) => {
             if (err || !data.code) return sendJson(res, 400, { error: 'Missing room code' });
@@ -417,7 +520,18 @@ const server = http.createServer((req, res) => {
             const room = activeRooms.get(code);
 
             if (!room) {
-                return sendJson(res, 404, { success: false, reason: 'Room code not found' });
+                return sendJson(res, 404, { success: false, reason: 'Room code not found or expired' });
+            }
+
+            if (room.status !== 'waiting') {
+                return sendJson(res, 403, { success: false, reason: 'Match is already in progress' });
+            }
+
+            // Password check
+            if (room.password) {
+                if (!data.password || data.password !== room.password) {
+                    return sendJson(res, 401, { success: false, reason: 'Incorrect room password' });
+                }
             }
 
             const guestName = data.guestName || 'Player';
@@ -454,7 +568,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 10. Authoritative Move Submission (HTTP Fallback)
+    // 11. Authoritative Move Submission (HTTP Fallback)
     if (req.method === 'POST' && reqPath === '/api/rooms/move') {
         parseJsonBody(req, (err, data) => {
             if (err || !data.code || !data.move) return sendJson(res, 400, { error: 'Missing move data' });
@@ -468,7 +582,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 11. Room Polling (HTTP Fallback)
+    // 12. Room Polling (HTTP Fallback)
     if (req.method === 'GET' && reqPath === '/api/rooms/poll') {
         const code = (parsedUrl.query.code || '').toUpperCase();
         const since = parseInt(parsedUrl.query.since || '0', 10);
@@ -493,13 +607,14 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 12. Spectator Active Rooms List
+    // 13. Spectator Active Rooms List
     if (req.method === 'GET' && reqPath === '/api/spectate/rooms') {
         const list = [];
         for (const [code, r] of activeRooms.entries()) {
             if (r.status === 'playing') {
                 list.push({
                     code,
+                    title: r.title,
                     mode: r.settings.mode || 'classic',
                     gameplayMode: r.settings.gameplayMode || 'breaking',
                     p1: r.p1,
@@ -515,7 +630,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 13. Replay Retrieval
+    // 14. Replay Retrieval
     if (req.method === 'GET' && reqPath.startsWith('/api/replays/')) {
         const matchId = reqPath.split('/api/replays/')[1];
         const replay = db.getReplay(matchId);
@@ -541,13 +656,17 @@ const server = http.createServer((req, res) => {
         const ext = path.extname(filePath).toLowerCase();
         const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-        res.writeHead(200, {
+        const headers = {
             'Content-Type': contentType,
             'Access-Control-Allow-Origin': '*',
             'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
             'Pragma': 'no-cache',
             'Expires': '0'
-        });
+        };
+        if (filePath.endsWith('index.html') || filePath.endsWith('sw.js')) {
+            headers['Clear-Site-Data'] = '"cache"';
+        }
+        res.writeHead(200, headers);
 
         const stream = fs.createReadStream(filePath);
         stream.pipe(res);
@@ -605,6 +724,12 @@ function applyAuthoritativeMove(room, playerRole, move) {
                     if (update) eloUpdates[p] = update;
                 }
             }
+
+            // Update persistent AI rating if bot match
+            if (room.isBotMatch && room.botProfile) {
+                const isBotWin = (room.game.winner === 2);
+                db.recordAiMatchResult(room.botProfile.username, isBotWin, isBotWin ? 30 : -30);
+            }
         }
 
         // Save match and replay to persistent DB
@@ -659,21 +784,6 @@ function applyAuthoritativeMove(room, playerRole, move) {
         turn: room.game.turn,
         winner: room.game.winner,
         matchFinalResult
-    };
-}
-
-function serializeRoom(room) {
-    return {
-        code: room.code,
-        hostName: room.hostName,
-        settings: room.settings,
-        maxPlayers: room.maxPlayers,
-        p1: room.p1,
-        p2: room.p2,
-        p3: room.p3,
-        p4: room.p4,
-        status: room.status,
-        totalMoves: room.moves.length
     };
 }
 
@@ -742,10 +852,16 @@ wss.on('connection', (ws, req) => {
                 }
             }
 
-            // 3. In-Game Real-Time Chat
+            // 3. In-Game Real-Time Chat (Human-to-Human ONLY, never bot matches!)
             else if (data.type === 'chat') {
                 const code = clientSession.roomCode;
+                const room = activeRooms.get(code);
                 if (!code || !data.text) return;
+
+                // Explicit Requirement: AI matches have chat strictly disabled
+                if (room && room.isBotMatch) {
+                    return;
+                }
 
                 const cleanText = String(data.text).slice(0, 120).trim();
                 broadcastToRoom(code, {

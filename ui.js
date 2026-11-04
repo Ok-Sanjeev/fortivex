@@ -251,6 +251,7 @@ class BarricadeUI {
         // P2 Box
         this.p2Box = document.getElementById('p2-match-box');
         this.p2NameLabel = document.getElementById('p2-name-label');
+        this.p2BotTag = document.getElementById('p2-bot-tag');
         this.p2EloTag = document.getElementById('p2-elo-tag');
         this.p2Clock = document.getElementById('p2-clock');
         this.p2WallBadge = document.getElementById('p2-wall-count');
@@ -259,6 +260,7 @@ class BarricadeUI {
         // P3 Box (4-Player KOTH)
         this.p3Box = document.getElementById('p3-match-box');
         this.p3NameLabel = document.getElementById('p3-name-label');
+        this.p3BotTag = document.getElementById('p3-bot-tag');
         this.p3EloTag = document.getElementById('p3-elo-tag');
         this.p3Clock = document.getElementById('p3-clock');
         this.p3WallBadge = document.getElementById('p3-wall-count');
@@ -267,10 +269,51 @@ class BarricadeUI {
         // P4 Box (4-Player KOTH)
         this.p4Box = document.getElementById('p4-match-box');
         this.p4NameLabel = document.getElementById('p4-name-label');
+        this.p4BotTag = document.getElementById('p4-bot-tag');
         this.p4EloTag = document.getElementById('p4-elo-tag');
         this.p4Clock = document.getElementById('p4-clock');
         this.p4WallBadge = document.getElementById('p4-wall-count');
         this.p4ChatBubble = document.getElementById('p4-chat-bubble');
+
+        // Matchmaking Radar & VS Elements
+        this.matchmakingSearchCard = document.getElementById('matchmaking-search-card');
+        this.matchmakingVsCard = document.getElementById('matchmaking-vs-card');
+        this.mmPlayerRatingChip = document.getElementById('mm-player-rating-chip');
+        this.mmSearchTimer = document.getElementById('mm-search-timer');
+        this.mmRatingRange = document.getElementById('mm-rating-range');
+        this.mmQueueStatus = document.getElementById('mm-queue-status');
+        this.vsP1Name = document.getElementById('vs-p1-name');
+        this.vsP1Rating = document.getElementById('vs-p1-rating');
+        this.vsP2Name = document.getElementById('vs-p2-name');
+        this.vsP2Rating = document.getElementById('vs-p2-rating');
+        this.vsP2Badge = document.getElementById('vs-p2-badge');
+        this.vsCountdownText = document.getElementById('vs-countdown-text');
+
+        // Public Rooms Browser Elements
+        this.publicRoomsList = document.getElementById('public-rooms-list');
+        this.btnRefreshPublicRooms = document.getElementById('btn-refresh-public-rooms');
+        this.activePublicFilter = 'all';
+
+        // Platform Statistics Elements
+        this.statOnlineHumans = document.getElementById('stat-online-humans');
+        this.statAvailableAi = document.getElementById('stat-available-ai');
+        this.statActiveMatches = document.getElementById('stat-active-matches');
+
+        // Room Creator Elements
+        this.customRoomTitleInput = document.getElementById('custom-room-title-input');
+        this.roomPasswordContainer = document.getElementById('room-password-container');
+        this.customRoomPasswordInput = document.getElementById('custom-room-password-input');
+        this.roomConfigPreviewText = document.getElementById('room-config-preview-text');
+
+        // Game Over Sheet Elements
+        this.goWinnerTitle = document.getElementById('gameover-winner-title');
+        this.goReasonSub = document.getElementById('gameover-reason-sub');
+        this.goOpponentName = document.getElementById('gameover-opponent-name');
+        this.goRatingChange = document.getElementById('gameover-rating-change');
+        this.goTurnsCount = document.getElementById('gameover-turns-count');
+        this.goDurationVal = document.getElementById('gameover-duration-val');
+        this.btnGoRematch = document.getElementById('btn-gameover-rematch');
+        this.btnGoLobby = document.getElementById('btn-gameover-lobby');
 
         // Bottom Controls
         this.btnOrientH = document.getElementById('btn-orient-h');
@@ -500,10 +543,14 @@ class BarricadeUI {
         });
 
         document.getElementById('btn-chat-toggle')?.addEventListener('click', () => {
+            if (this.playType === 'pve' || this.isOpponentAi || this.playType === 'watch') {
+                this.showToast('Chat is disabled against AI opponents');
+                return;
+            }
             this.chatSheet.classList.add('open');
         });
 
-        // Chat preset buttons
+        // Chat preset buttons (AI opponents NEVER reply)
         document.querySelectorAll('.chat-bubble-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const text = btn.textContent;
@@ -517,15 +564,37 @@ class BarricadeUI {
                         text: text
                     }));
                 }
-
-                if (this.playType === 'pve') {
-                    setTimeout(() => {
-                        const botReplies = ["Good luck!", "Thanks!", "Well played!", "Nice move!", "Let's see...", "Thinking!"];
-                        const rep = botReplies[Math.floor(Math.random() * botReplies.length)];
-                        this.showChatBubble(2, rep);
-                    }, 1200);
-                }
             });
+        });
+
+        // Public Rooms Browser: Filter Pills & Refresh
+        this.btnRefreshPublicRooms?.addEventListener('click', () => {
+            this.fetchPublicRooms(this.activePublicFilter);
+            sounds.playRotate();
+        });
+
+        document.querySelectorAll('.public-filter-pill').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.public-filter-pill').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                this.activePublicFilter = btn.dataset.filter || 'all';
+                this.fetchPublicRooms(this.activePublicFilter);
+            });
+        });
+
+        // Game Over Sheet Buttons
+        document.getElementById('btn-gameover-rematch')?.addEventListener('click', () => {
+            this.gameOverSheet?.classList.remove('open');
+            if (this.playType === 'pve') {
+                this.launchBotMatch();
+            } else {
+                this.startNewMatch();
+            }
+        });
+
+        document.getElementById('btn-gameover-lobby')?.addEventListener('click', () => {
+            this.gameOverSheet?.classList.remove('open');
+            this.switchView('home');
         });
 
         // 3. Wall Orientation Pills: Click to toggle on / off!
@@ -598,9 +667,14 @@ class BarricadeUI {
             .then(res => res.json())
             .then(data => {
                 if (data && data.success) {
-                    const statsEl = document.getElementById('real-stats-text');
-                    if (statsEl) {
-                        statsEl.textContent = `${data.onlineCount} players online · ${data.inGameCount} in games`;
+                    if (this.statOnlineHumans) {
+                        this.statOnlineHumans.textContent = `${data.humanOnlineCount || data.onlineCount || 1} Human Online`;
+                    }
+                    if (this.statAvailableAi) {
+                        this.statAvailableAi.textContent = `${data.aiAvailableCount || 100} AI Available`;
+                    }
+                    if (this.statActiveMatches) {
+                        this.statActiveMatches.textContent = `${data.activeMatchesCount || data.inGameCount || 0} Matches Active`;
                     }
                 }
             })
@@ -609,6 +683,80 @@ class BarricadeUI {
 
         sendBeat();
         setInterval(sendBeat, 3500);
+
+        // Initial fetch of public rooms + recurring interval
+        this.fetchPublicRooms();
+        setInterval(() => {
+            if (this.currentView === 'home') {
+                this.fetchPublicRooms();
+            }
+        }, 6000);
+    }
+
+    fetchPublicRooms(filter = this.activePublicFilter || 'all') {
+        fetch(`/api/rooms/public?filter=${filter}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success) {
+                    this.renderPublicRoomsList(data.rooms || []);
+                }
+            })
+            .catch(() => {});
+    }
+
+    renderPublicRoomsList(rooms) {
+        if (!this.publicRoomsList) return;
+
+        if (!rooms || rooms.length === 0) {
+            this.publicRoomsList.innerHTML = `
+                <div class="public-rooms-empty">
+                    <div class="empty-icon">🌐</div>
+                    <div class="empty-title">No Open Public Rooms</div>
+                    <div class="empty-sub">Be the first to build a public room and challenge anyone online!</div>
+                </div>
+            `;
+            return;
+        }
+
+        this.publicRoomsList.innerHTML = rooms.map(r => {
+            const isKoth = r.mode === 'koth';
+            const isBreaking = r.gameplayMode === 'breaking';
+            return `
+                <div class="public-room-card" data-code="${r.code}">
+                    <div class="room-card-info">
+                        <div class="room-card-title">
+                            <span>${r.title || r.code}</span>
+                            ${r.hasPassword ? '<span title="Password Protected">🔒</span>' : ''}
+                        </div>
+                        <div class="room-card-meta">
+                            <span class="room-meta-badge ${isKoth ? 'koth' : ''}">${isKoth ? '👑 4P KOTH' : 'Classic 2P'}</span>
+                            <span class="room-meta-badge ${isBreaking ? 'breaking' : ''}">${isBreaking ? '💥 Breaking' : 'Normal'}</span>
+                            <span>⏱ ${r.timeSec}s</span>
+                            <span>👥 ${r.currentPlayers}/${r.maxPlayers}</span>
+                        </div>
+                    </div>
+                    <div class="room-card-actions">
+                        <button class="btn-join-room-card" data-code="${r.code}" data-pwd="${r.hasPassword ? '1' : '0'}">Join</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        this.publicRoomsList.querySelectorAll('.btn-join-room-card').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const code = btn.dataset.code;
+                const hasPwd = btn.dataset.pwd === '1';
+                if (hasPwd) {
+                    const pwd = prompt(`Enter password for room ${code}:`);
+                    if (pwd !== null) {
+                        this.joinRoomAction(code, pwd);
+                    }
+                } else {
+                    this.joinRoomAction(code);
+                }
+            });
+        });
     }
 
     checkUrlForRoomInvite() {
@@ -639,11 +787,41 @@ class BarricadeUI {
     // ==========================================
     startRankedMatchmaking() {
         this.matchmakingOverlay.style.display = 'flex';
-        document.getElementById('matchmaking-title').textContent = 'Finding Online Opponent...';
-        document.getElementById('matchmaking-status').textContent = `Searching for real online players (~${this.userRating} ELO)...`;
-        if (this.btnRankedBotFallback) this.btnRankedBotFallback.style.display = 'none';
+        if (this.matchmakingSearchCard) this.matchmakingSearchCard.style.display = 'block';
+        if (this.matchmakingVsCard) this.matchmakingVsCard.style.display = 'none';
+
+        if (this.mmPlayerRatingChip) {
+            this.mmPlayerRatingChip.textContent = `💎 ${this.username} (${this.userRating} ELO)`;
+        }
+
+        // Reset stages
+        this.setMatchmakingStage(1);
+        if (this.mmQueueStatus) this.mmQueueStatus.textContent = 'Connecting to matchmaking server...';
+        if (this.mmRatingRange) this.mmRatingRange.textContent = `${Math.max(100, this.userRating - 50)} – ${this.userRating + 50}`;
+        if (this.mmSearchTimer) this.mmSearchTimer.textContent = '0:00';
 
         sounds.playTurnStart();
+
+        let searchSec = 0;
+        if (this.matchmakingDurationInterval) clearInterval(this.matchmakingDurationInterval);
+        this.matchmakingDurationInterval = setInterval(() => {
+            searchSec++;
+            if (this.mmSearchTimer) this.mmSearchTimer.textContent = this.formatClock(searchSec);
+
+            if (searchSec === 1) {
+                this.setMatchmakingStage(2);
+                if (this.mmQueueStatus) this.mmQueueStatus.textContent = 'Searching active player queue...';
+            } else if (searchSec === 3) {
+                this.setMatchmakingStage(3);
+                const spread = 100;
+                if (this.mmRatingRange) this.mmRatingRange.textContent = `${Math.max(100, this.userRating - spread)} – ${this.userRating + spread}`;
+                if (this.mmQueueStatus) this.mmQueueStatus.textContent = 'Expanding rating window...';
+            } else if (searchSec >= 5) {
+                const spread = 200;
+                if (this.mmRatingRange) this.mmRatingRange.textContent = `${Math.max(100, this.userRating - spread)} – ${this.userRating + spread}`;
+                if (this.mmQueueStatus) this.mmQueueStatus.textContent = 'Locating available opponent...';
+            }
+        }, 1000);
 
         // 1. Send join matchmaking request to server
         fetch('/api/matchmaking/join', {
@@ -651,6 +829,7 @@ class BarricadeUI {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 clientId: this.clientId,
+                userId: this.userId,
                 username: this.username,
                 rating: this.userRating
             })
@@ -658,24 +837,28 @@ class BarricadeUI {
         .then(res => res.json())
         .then(data => {
             if (data.matched) {
-                // Instantly paired with a waiting real player!
                 this.handleRankedMatchFound(data);
             } else {
-                // Waiting in real queue: start polling
                 this.pollRankedQueue();
             }
         })
         .catch(() => {
             this.showToast('Could not connect to matchmaking queue');
         });
+    }
 
-        // 2. Fallback option if no other real player is online after 8s
-        this.matchmakingTimeout = setTimeout(() => {
-            if (this.matchmakingOverlay.style.display === 'flex' && this.btnRankedBotFallback) {
-                document.getElementById('matchmaking-status').textContent = 'No other player online right now. Match challenging Bot or wait?';
-                this.btnRankedBotFallback.style.display = 'block';
+    setMatchmakingStage(stageNum) {
+        for (let i = 1; i <= 5; i++) {
+            const el = document.getElementById(`mm-stage-${i}`);
+            if (!el) continue;
+            if (i < stageNum) {
+                el.className = 'mm-stage-row done';
+            } else if (i === stageNum) {
+                el.className = 'mm-stage-row active';
+            } else {
+                el.className = 'mm-stage-row';
             }
-        }, 8000);
+        }
     }
 
     pollRankedQueue() {
@@ -686,7 +869,7 @@ class BarricadeUI {
                 .then(data => {
                     if (data.matched) {
                         clearInterval(this.matchmakingPollInterval);
-                        clearTimeout(this.matchmakingTimeout);
+                        clearInterval(this.matchmakingDurationInterval);
                         this.handleRankedMatchFound(data);
                     }
                 })
@@ -695,38 +878,69 @@ class BarricadeUI {
     }
 
     handleRankedMatchFound(data) {
-        document.getElementById('matchmaking-title').textContent = data.opponent.isBot ? 'Bot Opponent Assigned!' : 'Real Opponent Matched!';
-        document.getElementById('matchmaking-status').textContent = `${data.opponent.username} (${data.opponent.rating} ELO)`;
+        clearInterval(this.matchmakingPollInterval);
+        clearInterval(this.matchmakingDurationInterval);
+
+        this.setMatchmakingStage(4);
+        if (this.mmQueueStatus) this.mmQueueStatus.textContent = 'Opponent matched!';
         sounds.playVictory();
         this.vibrate([30, 30, 50]);
 
+        this.activeRoomCode = data.roomCode;
+        this.myPlayerRole = data.role || 1;
+        this.opponentName = data.opponent.username; // Strictly noobXXXXX
+        this.opponentRating = data.opponent.rating;
+        this.isRanked = true;
+        this.isOpponentAi = !!data.opponent.isBot;
+        this.lastSyncedMoveIndex = 0;
+
+        if (data.opponent.isBot) {
+            this.playType = 'pve';
+            this.ai.setDifficulty(data.opponent.difficulty || 'hard');
+        } else {
+            this.playType = 'online_pvp';
+        }
+
+        // Show VS Screen Card!
         setTimeout(() => {
-            this.matchmakingOverlay.style.display = 'none';
-            this.activeRoomCode = data.roomCode;
-            this.myPlayerRole = data.role || 1; // 1 = Blue, 2 = Red
-            this.opponentName = data.opponent.username;
-            this.opponentRating = data.opponent.rating;
-            this.isRanked = true;
-            this.lastSyncedMoveIndex = 0;
-
-            if (data.opponent.isBot) {
-                this.playType = 'pve';
-                this.ai.setDifficulty(data.opponent.difficulty || 'hard');
-            } else {
-                this.playType = 'online_pvp';
+            this.setMatchmakingStage(5);
+            if (this.matchmakingSearchCard) this.matchmakingSearchCard.style.display = 'none';
+            if (this.matchmakingVsCard) {
+                this.matchmakingVsCard.style.display = 'block';
+                if (this.vsP1Name) this.vsP1Name.textContent = this.username;
+                if (this.vsP1Rating) this.vsP1Rating.textContent = `${this.userRating} ELO`;
+                if (this.vsP2Name) this.vsP2Name.textContent = this.opponentName;
+                if (this.vsP2Rating) this.vsP2Rating.textContent = `${this.opponentRating} ELO`;
+                if (this.vsP2Badge) this.vsP2Badge.textContent = data.opponent.isBot ? 'AI OPPONENT' : 'OPPONENT';
             }
 
-            this.startNewMatch({ mode: 'classic', initialWalls: 10, timeSec: 180 });
-            if (this.playType === 'online_pvp') {
-                this.startOnlineMovePolling();
-            }
-            this.showToast(`Ranked Match vs ${this.opponentName}!`);
-        }, 800);
+            let countdown = 2;
+            const vsTimer = setInterval(() => {
+                countdown--;
+                if (this.vsCountdownText) {
+                    this.vsCountdownText.textContent = `Match starting in ${countdown}...`;
+                }
+                if (countdown <= 0) {
+                    clearInterval(vsTimer);
+                    this.matchmakingOverlay.style.display = 'none';
+                    if (this.matchmakingVsCard) this.matchmakingVsCard.style.display = 'none';
+
+                    this.startNewMatch({ mode: 'classic', initialWalls: 10, timeSec: 180, gameplayMode: 'breaking', breakCost: 5 });
+                    if (this.playType === 'online_pvp') {
+                        this.startOnlineMovePolling();
+                    }
+                    if (this.myPlayerRole === 2 && this.game.turn === 1) {
+                        this.triggerAiTurnIfNeeded();
+                    }
+                    this.showToast(`Ranked Match vs ${this.opponentName}!`);
+                }
+            }, 1000);
+        }, 500);
     }
 
     startRankedBotFallback() {
         clearInterval(this.matchmakingPollInterval);
-        clearTimeout(this.matchmakingTimeout);
+        clearInterval(this.matchmakingDurationInterval);
         fetch('/api/matchmaking/leave', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -734,19 +948,21 @@ class BarricadeUI {
         }).catch(() => {});
 
         this.matchmakingOverlay.style.display = 'none';
+        if (this.matchmakingVsCard) this.matchmakingVsCard.style.display = 'none';
         this.isRanked = true;
         this.playType = 'pve';
-        this.opponentName = 'noob10088 [Apex Bot]';
+        this.isOpponentAi = true;
+        this.opponentName = 'noob10088';
         this.opponentRating = Math.max(100, this.userRating + 30);
         this.ai.setDifficulty('hard');
 
-        this.startNewMatch({ mode: 'classic', initialWalls: 10, timeSec: 180 });
+        this.startNewMatch({ mode: 'classic', initialWalls: 10, timeSec: 180, gameplayMode: 'breaking', breakCost: 5 });
         this.showToast(`Ranked Match vs ${this.opponentName}`);
     }
 
     cancelRankedMatchmaking() {
         clearInterval(this.matchmakingPollInterval);
-        clearTimeout(this.matchmakingTimeout);
+        clearInterval(this.matchmakingDurationInterval);
 
         fetch('/api/matchmaking/leave', {
             method: 'POST',
@@ -755,6 +971,7 @@ class BarricadeUI {
         }).catch(() => {});
 
         this.matchmakingOverlay.style.display = 'none';
+        if (this.matchmakingVsCard) this.matchmakingVsCard.style.display = 'none';
         this.showToast('Matchmaking cancelled');
     }
 
@@ -796,6 +1013,9 @@ class BarricadeUI {
 
     buildAndHostRoom() {
         const code = document.getElementById('display-room-code')?.textContent.trim() || ('FORT-' + Math.floor(1000 + Math.random() * 9000));
+        const title = this.customRoomTitleInput?.value.trim() || `${this.username}'s Arena`;
+        const isPublic = document.querySelector('.room-vis-pill.selected')?.dataset.visibility !== 'private';
+        const password = this.customRoomPasswordInput?.value.trim() || null;
         const mode = document.querySelector('.room-mode-box.selected')?.dataset.mode || 'classic';
         const gameplayMode = document.querySelector('.room-gameplay-pill.selected')?.dataset.gameplay || 'breaking';
         const breakCost = parseInt(document.querySelector('.room-break-cost-pill.selected')?.dataset.cost || '5', 10);
@@ -809,7 +1029,11 @@ class BarricadeUI {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 code: code,
+                title: title,
+                isPublic: isPublic,
+                password: password,
                 hostName: this.username,
+                userId: this.userId,
                 settings: { mode, gameplayMode, breakCost, timeSec, walls, hostColor }
             })
         })
@@ -820,6 +1044,7 @@ class BarricadeUI {
                 this.activeRoomCode = code;
                 this.myPlayerRole = (hostColor === 'blue') ? 1 : 2;
                 this.showRoomLobbyOverlay(code, { mode, gameplayMode, breakCost, timeSec, walls, hostColor });
+                this.fetchPublicRooms();
             } else {
                 this.showToast(data.error || 'Failed to create room');
             }
@@ -865,7 +1090,7 @@ class BarricadeUI {
         }, 1200);
     }
 
-    joinRoomAction(codeParam) {
+    joinRoomAction(codeParam, passwordParam = null) {
         let code = codeParam;
         if (!code) {
             const frontInput = document.getElementById('front-join-room-input');
@@ -878,12 +1103,16 @@ class BarricadeUI {
             return;
         }
 
+        const password = passwordParam || this.joinRoomPasswordInput?.value.trim() || null;
+
         fetch('/api/rooms/join', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 code: code,
-                guestName: this.username
+                guestName: this.username,
+                userId: this.userId,
+                password: password
             })
         })
         .then(res => res.json())
@@ -1376,6 +1605,7 @@ class BarricadeUI {
         if (viewName === 'home') {
             this.homeView.style.display = 'flex';
             this.gameView.style.display = 'none';
+            this.fetchPublicRooms();
         } else {
             this.homeView.style.display = 'none';
             this.gameView.style.display = 'flex';
@@ -1678,6 +1908,7 @@ class BarricadeUI {
         sounds.playVictory();
         const isWin = (winner === this.myPlayerRole);
         const delta = isWin ? 30 : -30;
+        const beforeElo = this.userRating;
 
         if (this.isRanked) {
             this.userRating = Math.max(100, this.userRating + delta);
@@ -1689,19 +1920,43 @@ class BarricadeUI {
 
             localStorage.setItem('fortivex_elo', this.userRating);
             localStorage.setItem(`fortivex_streak_${this.username}`, this.userStreak);
+
+            if (this.userId) {
+                fetch('/api/user/ranked-result', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: this.userId,
+                        isWin: isWin,
+                        opponentName: this.opponentName
+                    })
+                }).catch(() => {});
+            }
         }
 
         // Open Game Over Sheet
-        document.getElementById('gameover-winner-title').textContent = isWin ? 'Victory!' : 'Defeat!';
-        document.getElementById('gameover-reason-sub').textContent = reason || (isWin ? 'Mastery of barriers' : 'Opponent broke through');
-        const ratingChangeEl = document.getElementById('gameover-rating-change');
-        if (ratingChangeEl) {
-            ratingChangeEl.textContent = this.isRanked ? (delta > 0 ? `+${delta}` : `${delta}`) : 'Unranked';
-            ratingChangeEl.className = `gameover-rating-change ${isWin ? 'rating-win' : 'rating-loss'}`;
+        if (this.goWinnerTitle) this.goWinnerTitle.textContent = isWin ? 'Victory!' : 'Defeat!';
+        if (this.goReasonSub) this.goReasonSub.textContent = reason || (isWin ? 'Reached the goal line' : 'Opponent reached the goal line');
+        if (this.goOpponentName) this.goOpponentName.textContent = this.opponentName || 'Opponent';
+
+        if (this.goRatingChange) {
+            if (this.isRanked) {
+                this.goRatingChange.textContent = `${beforeElo} → ${this.userRating} (${delta > 0 ? '+' + delta : delta})`;
+                this.goRatingChange.className = `gameover-rating-chip ${isWin ? 'rating-win' : 'rating-loss'}`;
+            } else {
+                this.goRatingChange.textContent = 'Unranked Match';
+                this.goRatingChange.className = 'gameover-rating-chip';
+            }
         }
 
+        const totalMoves = (this.game && this.game.moveHistory) ? this.game.moveHistory.length : 0;
+        if (this.goTurnsCount) this.goTurnsCount.textContent = `${totalMoves} moves`;
+
+        const matchDuration = this.matchStartTime ? Math.floor((Date.now() - this.matchStartTime) / 1000) : 45;
+        if (this.goDurationVal) this.goDurationVal.textContent = this.formatClock(matchDuration);
+
         setTimeout(() => {
-            this.gameOverSheet.classList.add('open');
+            this.gameOverSheet?.classList.add('open');
         }, 600);
     }
 
@@ -1755,10 +2010,12 @@ class BarricadeUI {
 
     launchBotMatch() {
         this.botSheet?.classList.remove('open');
+        const gameplayMode = document.querySelector('#bot-sheet .bot-gameplay-pill.selected')?.dataset.gameplay || 'breaking';
         const diff = document.querySelector('#bot-sheet .diff-pill.selected')?.dataset.diff || 'medium';
         const mode = document.querySelector('#bot-sheet .bot-mode-box.selected')?.dataset.mode || 'classic';
-        const gameplayMode = document.querySelector('#bot-sheet .bot-gameplay-pill.selected')?.dataset.gameplay || 'breaking';
         const breakCost = parseInt(document.querySelector('#bot-sheet .bot-break-cost-pill.selected')?.dataset.cost || '5', 10);
+        const walls = parseInt(document.querySelector('#bot-sheet .bot-wall-pill.selected')?.dataset.walls || (mode === 'koth' ? '5' : '10'), 10);
+        const timeSec = parseInt(document.querySelector('#bot-sheet .bot-time-pill.selected')?.dataset.sec || '180', 10);
         const colorChoice = document.querySelector('#bot-sheet .bot-color-pill.selected')?.dataset.color || 'blue';
         const myColor = (colorChoice === 'random') ? (Math.random() < 0.5 ? 'blue' : 'red') : colorChoice;
 
@@ -1766,32 +2023,49 @@ class BarricadeUI {
         this.ai.setDifficulty(diff);
         this.playType = 'pve';
         this.isRanked = false;
+        this.isOpponentAi = true;
         this.myPlayerRole = (myColor === 'blue') ? 1 : 2;
 
-        const diffNames = {
-            easy: 'Tactical Novice',
-            medium: 'Strategist',
-            hard: 'Grandmaster Minimax',
-            impossible: 'Apex Impossible 🔥'
+        // Persistent 100-AI pool matching selected difficulty
+        const botPool = {
+            easy: [
+                { username: 'noob10005', rating: 920 },
+                { username: 'noob10012', rating: 1040 },
+                { username: 'noob10018', rating: 1150 },
+                { username: 'noob10024', rating: 1220 }
+            ],
+            medium: [
+                { username: 'noob10031', rating: 1350 },
+                { username: 'noob10042', rating: 1480 },
+                { username: 'noob10050', rating: 1560 },
+                { username: 'noob10058', rating: 1620 }
+            ],
+            hard: [
+                { username: 'noob10065', rating: 1720 },
+                { username: 'noob10072', rating: 1840 },
+                { username: 'noob10079', rating: 1950 },
+                { username: 'noob10084', rating: 2020 }
+            ],
+            impossible: [
+                { username: 'noob10088', rating: 2150 },
+                { username: 'noob10092', rating: 2280 },
+                { username: 'noob10096', rating: 2390 },
+                { username: 'noob10100', rating: 2450 }
+            ]
         };
 
-        const diffElos = {
-            easy: 1200,
-            medium: 1550,
-            hard: 1950,
-            impossible: 2350
-        };
+        const list = botPool[diff] || botPool.medium;
+        const pickedBot = list[Math.floor(Math.random() * list.length)];
 
-        this.opponentName = `Bot (${diffNames[diff] || 'AI'})`;
-        this.opponentRating = diffElos[diff] || 1550;
+        this.opponentName = pickedBot.username; // Strictly noobXXXXX
+        this.opponentRating = pickedBot.rating;
 
-        const initialWalls = (mode === 'koth') ? 5 : 10;
         this.startNewMatch({
             mode: mode,
             gameplayMode: gameplayMode,
             breakCost: breakCost,
-            initialWalls: initialWalls,
-            timeSec: 300
+            initialWalls: walls,
+            timeSec: timeSec
         });
 
         this.showToast(`Starting match vs ${this.opponentName}!`);
@@ -1807,6 +2081,7 @@ class BarricadeUI {
         const breakCost = opts.breakCost !== undefined ? opts.breakCost : 5;
         const initialWalls = opts.initialWalls !== undefined ? opts.initialWalls : (mode === 'koth' ? 5 : 10);
 
+        this.matchStartTime = Date.now();
         this.game = new BarricadeGame({
             gameMode: mode,
             gameplayMode: gameplayMode,
@@ -1885,38 +2160,44 @@ class BarricadeUI {
 
         // In-Game Player Card Names
         if (this.p1NameLabel) {
-            this.p1NameLabel.textContent = (this.playType === 'watch') ? 'Tactician Alpha' : this.username;
+            this.p1NameLabel.textContent = (this.playType === 'watch') ? 'noob10015' : this.username;
         }
         if (this.p1EloTag) {
-            this.p1EloTag.textContent = (this.playType === 'watch') ? '(Bot)' : `(${this.userRating})`;
+            this.p1EloTag.textContent = (this.playType === 'watch') ? '(1520)' : `(${this.userRating})`;
         }
 
         if (this.p2NameLabel && this.p2EloTag) {
             if (this.playType === 'puzzle') {
                 this.p2NameLabel.textContent = `Daily #${(this.dailyPuzzleIdx || 0) + 1}/3`;
                 this.p2EloTag.textContent = '(Tactics)';
+                if (this.p2BotTag) this.p2BotTag.style.display = 'none';
             } else if (this.playType === 'online_pvp') {
                 this.p2NameLabel.textContent = this.opponentName || 'Opponent';
                 this.p2EloTag.textContent = `(${this.opponentRating || 'Online'})`;
+                if (this.p2BotTag) this.p2BotTag.style.display = this.isOpponentAi ? 'inline-block' : 'none';
             } else if (this.playType === 'pvp') {
                 this.p2NameLabel.textContent = 'Player 2';
                 this.p2EloTag.textContent = '(Local)';
+                if (this.p2BotTag) this.p2BotTag.style.display = 'none';
             } else if (this.playType === 'watch') {
-                this.p2NameLabel.textContent = 'Tactician Beta';
-                this.p2EloTag.textContent = '(Bot)';
+                this.p2NameLabel.textContent = 'noob10088';
+                this.p2EloTag.textContent = '(1980)';
+                if (this.p2BotTag) this.p2BotTag.style.display = 'inline-block';
             } else {
-                const diffLabels = { easy: 'Easy Bot', medium: 'Tactician Bot', hard: 'Master Bot', impossible: 'Apex Bot' };
-                this.p2NameLabel.textContent = diffLabels[this.selectedBotDiff] || 'Bot';
+                this.p2NameLabel.textContent = this.opponentName || 'noob10042';
                 this.p2EloTag.textContent = `(${this.opponentRating || 1350})`;
+                if (this.p2BotTag) this.p2BotTag.style.display = 'inline-block';
             }
         }
 
         // KOTH 4-Player mode player names
         if (this.game.gameMode === 'koth') {
-            if (this.p3NameLabel) this.p3NameLabel.textContent = 'Emerald Bot';
-            if (this.p3EloTag) this.p3EloTag.textContent = '(P3)';
-            if (this.p4NameLabel) this.p4NameLabel.textContent = 'Amber Bot';
-            if (this.p4EloTag) this.p4EloTag.textContent = '(P4)';
+            if (this.p3NameLabel) this.p3NameLabel.textContent = 'noob10055';
+            if (this.p3EloTag) this.p3EloTag.textContent = '(1620)';
+            if (this.p3BotTag) this.p3BotTag.style.display = 'inline-block';
+            if (this.p4NameLabel) this.p4NameLabel.textContent = 'noob10082';
+            if (this.p4EloTag) this.p4EloTag.textContent = '(1810)';
+            if (this.p4BotTag) this.p4BotTag.style.display = 'inline-block';
         }
     }
 
@@ -2213,9 +2494,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    document.querySelectorAll('.bot-break-cost-pill').forEach(p => {
+    // Custom Room Visibility & Password Toggle
+    function updateRoomConfigSummary() {
+        const mode = document.querySelector('.room-mode-box.selected')?.dataset.mode || 'classic';
+        const gameplay = document.querySelector('.room-gameplay-pill.selected')?.dataset.gameplay || 'breaking';
+        const cost = document.querySelector('.room-break-cost-pill.selected')?.dataset.cost || '5';
+        const time = document.querySelector('.room-time-pill.selected')?.dataset.sec || '30';
+        const walls = document.querySelector('.room-wall-pill.selected')?.dataset.walls || '10';
+        const vis = document.querySelector('.room-vis-pill.selected')?.dataset.visibility || 'public';
+
+        const modeStr = (mode === 'koth') ? 'King of the Hill (4P)' : 'Classic (2P)';
+        const gameStr = (gameplay === 'breaking') ? `Breaking (Cost ${cost})` : 'Normal Mode';
+        const visStr = (vis === 'public') ? 'Public Room' : 'Private (Code Only)';
+
+        const previewEl = document.getElementById('room-config-preview-text');
+        if (previewEl) {
+            previewEl.textContent = `${modeStr} · ${gameStr} · ${time}s Turn · ${walls} Barricades · ${visStr}`;
+        }
+    }
+
+    document.querySelectorAll('.room-vis-pill').forEach(p => {
         p.addEventListener('click', () => {
-            document.querySelectorAll('.bot-break-cost-pill').forEach(x => x.classList.remove('selected'));
+            document.querySelectorAll('.room-vis-pill').forEach(x => x.classList.remove('selected'));
+            p.classList.add('selected');
+            const pwdSec = document.getElementById('room-password-container');
+            if (pwdSec) pwdSec.style.display = (p.dataset.visibility === 'private') ? 'block' : 'none';
+            updateRoomConfigSummary();
+        });
+    });
+
+    document.querySelectorAll('.room-mode-box, .room-gameplay-pill, .room-break-cost-pill, .room-time-pill, .room-wall-pill').forEach(el => {
+        el.addEventListener('click', () => updateRoomConfigSummary());
+    });
+
+    // Bot Sheet Wall & Time Pills
+    document.querySelectorAll('.bot-wall-pill').forEach(p => {
+        p.addEventListener('click', () => {
+            document.querySelectorAll('.bot-wall-pill').forEach(x => x.classList.remove('selected'));
+            p.classList.add('selected');
+        });
+    });
+
+    document.querySelectorAll('.bot-time-pill').forEach(p => {
+        p.addEventListener('click', () => {
+            document.querySelectorAll('.bot-time-pill').forEach(x => x.classList.remove('selected'));
             p.classList.add('selected');
         });
     });

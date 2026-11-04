@@ -1,10 +1,10 @@
 /**
  * FORTIVEX Service Worker (sw.js)
- * Cache version: fortivex-v2.0.0
+ * Cache version: fortivex-v2.0.2
  * Network-First Strategy with immediate cache purge of legacy 'barricade-cache-v1'
  */
 
-const CACHE_NAME = 'fortivex-cache-v2.0.0';
+const CACHE_NAME = 'fortivex-cache-v2.0.2';
 const ASSETS = [
     './',
     './index.html',

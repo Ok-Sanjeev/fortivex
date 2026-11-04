@@ -1496,3 +1496,644 @@ input:checked + .slider-round:before {
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ========================================================
+   FORTIVEX 2.0 RADAR MATCHMAKING & COMPETITIVE UI
+   ======================================================== */
+
+.mm-header-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #60a5fa;
+    margin-bottom: 4px;
+}
+
+.mm-rating-chip {
+    display: inline-block;
+    background: #252830;
+    border: 1px solid #3b404d;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-bottom: 16px;
+}
+
+/* Radar Scope Container */
+.radar-scope-container {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 16px auto;
+    border-radius: 50%;
+    border: 2px solid rgba(59, 130, 246, 0.4);
+    background: radial-gradient(circle, #0f172a 0%, #070a10 100%);
+    box-shadow: 0 0 25px rgba(37, 99, 235, 0.25), inset 0 0 15px rgba(37, 99, 235, 0.2);
+    overflow: hidden;
+}
+
+.radar-concentric-1, .radar-concentric-2, .radar-concentric-3 {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid rgba(59, 130, 246, 0.22);
+}
+
+.radar-concentric-1 { width: 42px; height: 42px; }
+.radar-concentric-2 { width: 84px; height: 84px; }
+.radar-concentric-3 { width: 124px; height: 124px; }
+
+.radar-crosshair-h {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: rgba(59, 130, 246, 0.2);
+    transform: translateY(-50%);
+}
+
+.radar-crosshair-v {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 1px;
+    height: 100%;
+    background: rgba(59, 130, 246, 0.2);
+    transform: translateX(-50%);
+}
+
+.radar-scanner-sweep {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg at 50% 50%, rgba(37, 99, 235, 0.4) 0deg, rgba(59, 130, 246, 0.05) 60deg, transparent 90deg);
+    animation: radar-sweep-spin 2.2s linear infinite;
+}
+
+@keyframes radar-sweep-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.radar-center-blip {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background: #3b82f6;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px #60a5fa;
+}
+
+.radar-target-blip {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 8px #4ade80;
+    animation: radar-blip-pulse 1.8s infinite ease-in-out;
+}
+
+.radar-target-blip.blip-1 { top: 28%; left: 68%; animation-delay: 0.4s; }
+.radar-target-blip.blip-2 { top: 72%; left: 32%; animation-delay: 1.1s; }
+
+@keyframes radar-blip-pulse {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.3); }
+}
+
+/* Matchmaking Info Rows */
+.mm-info-panel {
+    background: #14161a;
+    border: 1px solid #282b33;
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+}
+
+.mm-info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 0.76rem;
+}
+
+.mm-info-label {
+    color: #94a3b8;
+}
+
+.mm-info-val {
+    color: #fff;
+    font-weight: 700;
+}
+
+.mm-info-val.highlight {
+    color: #60a5fa;
+}
+
+/* Matchmaking Stages List */
+.mm-stages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 18px;
+    text-align: left;
+    padding: 0 4px;
+}
+
+.mm-stage-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.74rem;
+    color: #64748b;
+    transition: all 0.25s ease;
+}
+
+.mm-stage-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #334155;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+}
+
+.mm-stage-row.active {
+    color: #60a5fa;
+    font-weight: 700;
+}
+
+.mm-stage-row.active .mm-stage-dot {
+    background: #3b82f6;
+    box-shadow: 0 0 8px #60a5fa;
+    transform: scale(1.25);
+}
+
+.mm-stage-row.done {
+    color: #22c55e;
+}
+
+.mm-stage-row.done .mm-stage-dot {
+    background: #22c55e;
+}
+
+/* Match Found VS Screen Card */
+.matchmaking-vs-card {
+    background: #18191e;
+    border: 1px solid #2f333d;
+    border-radius: 20px;
+    padding: 24px 20px;
+    text-align: center;
+    width: 90%;
+    max-width: 340px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+    animation: vsPopup 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes vsPopup {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.vs-banner-title {
+    font-size: 1.35rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #f59e0b;
+    margin-bottom: 2px;
+}
+
+.vs-mode-subtitle {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-bottom: 20px;
+}
+
+.vs-matchup-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    margin-bottom: 18px;
+}
+
+.vs-player-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 100px;
+}
+
+.vs-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.vs-avatar.blue-glow {
+    background: #172554;
+    border: 2px solid #3b82f6;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+}
+
+.vs-avatar.red-glow {
+    background: #450a0a;
+    border: 2px solid #ef4444;
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.vs-player-name {
+    font-weight: 800;
+    font-size: 0.88rem;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100px;
+}
+
+.vs-player-rating {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.vs-role-tag {
+    font-size: 0.62rem;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.vs-role-tag.you-tag {
+    background: #2563eb;
+    color: #fff;
+}
+
+.vs-role-tag.opp-tag {
+    background: #272a33;
+    border: 1px solid #3a3f4d;
+    color: #cbd5e1;
+}
+
+.vs-center-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.vs-text {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #f59e0b;
+    text-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
+}
+
+.vs-lightning {
+    font-size: 1rem;
+    margin-top: -4px;
+}
+
+.vs-countdown-timer {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #f59e0b;
+    letter-spacing: 0.5px;
+}
+
+/* ========================================================
+   PUBLIC CUSTOM ROOM BROWSER
+   ======================================================== */
+
+.public-rooms-section {
+    margin-top: 16px;
+}
+
+.public-rooms-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.btn-refresh-rooms-icon {
+    background: #202227;
+    border: 1px solid #2f333d;
+    color: #94a3b8;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.btn-refresh-rooms-icon:hover {
+    color: #fff;
+    border-color: #4b5563;
+}
+
+.public-room-filters {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+    scrollbar-width: none;
+}
+
+.public-room-filters::-webkit-scrollbar {
+    display: none;
+}
+
+.public-filter-pill {
+    background: #1c1d22;
+    border: 1px solid #2a2d36;
+    color: #94a3b8;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s ease;
+}
+
+.public-filter-pill:hover {
+    color: #fff;
+    border-color: #3b82f6;
+}
+
+.public-filter-pill.active {
+    background: #2563eb;
+    border-color: #3b82f6;
+    color: #fff;
+    font-weight: 700;
+}
+
+.public-rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 230px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.public-room-card {
+    background: #1c1d22;
+    border: 1px solid #2d313a;
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+.public-room-card:hover {
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+}
+
+.room-card-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+}
+
+.room-card-title {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.room-card-meta {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 0.68rem;
+    color: #94a3b8;
+}
+
+.room-meta-badge {
+    background: #252831;
+    border: 1px solid #353945;
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.room-meta-badge.koth {
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+.room-meta-badge.breaking {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.room-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-join-room-card {
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+
+.btn-join-room-card:hover {
+    background: #22c55e;
+}
+
+.public-rooms-empty {
+    text-align: center;
+    padding: 20px 14px;
+    background: #15161a;
+    border: 1px dashed #282c35;
+    border-radius: 12px;
+}
+
+.empty-icon {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+}
+
+.empty-title {
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: #94a3b8;
+}
+
+.empty-sub {
+    font-size: 0.72rem;
+    color: #64748b;
+    margin-top: 2px;
+    line-height: 1.35;
+}
+
+/* ========================================================
+   PLATFORM STATISTICS FOOTER
+   ======================================================== */
+
+.platform-stats-footer {
+    margin-top: 18px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.73rem;
+    color: #64748b;
+    flex-wrap: wrap;
+}
+
+.platform-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat-indicator-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.stat-indicator-dot.online {
+    background: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+}
+
+.stat-indicator-dot.bot {
+    background: #3b82f6;
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+}
+
+.stat-sep {
+    color: #334155;
+}
+
+/* In-Game Bot Badge Tag */
+.bot-badge-tag {
+    background: #1e3a8a;
+    border: 1px solid #3b82f6;
+    color: #93c5fd;
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 3px;
+    margin-left: 3px;
+    vertical-align: middle;
+}
+
+/* Room Creator Configuration Summary */
+.room-summary-preview-card {
+    background: #14161a;
+    border: 1px solid #282b33;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-top: 12px;
+    margin-bottom: 14px;
+    text-align: left;
+}
+
+.preview-header {
+    font-size: 0.64rem;
+    font-weight: 800;
+    color: var(--amber-gold);
+    letter-spacing: 0.8px;
+}
+
+.preview-content {
+    font-size: 0.74rem;
+    color: #cbd5e1;
+    margin-top: 3px;
+    font-weight: 600;
+}
+
+/* Match Results Screen */
+.gameover-stats-card {
+    background: #16171c;
+    border: 1px solid #282b34;
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 14px 0;
+    text-align: left;
+}
+
+.go-stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 0.78rem;
+    border-bottom: 1px solid #1f2127;
+}
+
+.go-stat-row:last-child {
+    border-bottom: none;
+}
+
+.go-stat-label {
+    color: #94a3b8;
+}
+
+.go-stat-val {
+    color: #fff;
+    font-weight: 700;
+}
+
+.gameover-rating-chip {
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+}
+
+.rating-win {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.rating-loss {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}

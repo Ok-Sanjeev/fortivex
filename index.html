@@ -8,14 +8,14 @@
     <meta name="theme-color" content="#121214">
     <title>FORTIVEX — Online Strategy Board Game</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=2.0.0">
+    <link rel="stylesheet" href="styles.css?v=2.0.2">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%23f59e0b'/><path d='M6 6h12v4H6zm0 8h12v4H6z' fill='%23121214'/></svg>">
     <script>
         // Force purge old legacy cache and reset old user_XXXX handles
         if ('caches' in window) {
             caches.keys().then(names => {
                 names.forEach(name => {
-                    if (name.includes('barricade')) caches.delete(name);
+                    if (name.includes('barricade') || !name.includes('v2.0.2')) caches.delete(name);
                 });
             });
         }
@@ -25,9 +25,11 @@
             });
         }
         const oldHandle = localStorage.getItem('barricade_username') || localStorage.getItem('fortivex_username');
-        if (oldHandle && oldHandle.startsWith('user_')) {
+        if (!oldHandle || oldHandle.startsWith('user_')) {
             localStorage.removeItem('barricade_username');
             localStorage.removeItem('fortivex_username');
+            localStorage.removeItem('barricade_user_id');
+            localStorage.removeItem('fortivex_user_id');
             localStorage.removeItem('barricade_signed_in');
             localStorage.removeItem('fortivex_signed_in');
         }
@@ -100,6 +102,7 @@
                     <div class="player-box-top">
                         <div class="player-name-wrapper">
                             <span id="p2-name-label" class="player-box-name">Opponent</span>
+                            <span id="p2-bot-tag" class="bot-badge-tag" style="display: none;">AI</span>
                             <span id="p2-elo-tag" class="player-box-elo">(1380)</span>
                         </div>
                     </div>
@@ -118,6 +121,7 @@
                     <div class="player-box-top">
                         <div class="player-name-wrapper">
                             <span id="p3-name-label" class="player-box-name">Player 3</span>
+                            <span id="p3-bot-tag" class="bot-badge-tag" style="display: none;">AI</span>
                             <span id="p3-elo-tag" class="player-box-elo">(Bot)</span>
                         </div>
                     </div>
@@ -136,6 +140,7 @@
                     <div class="player-box-top">
                         <div class="player-name-wrapper">
                             <span id="p4-name-label" class="player-box-name">Player 4</span>
+                            <span id="p4-bot-tag" class="bot-badge-tag" style="display: none;">AI</span>
                             <span id="p4-elo-tag" class="player-box-elo">(Bot)</span>
                         </div>
                     </div>
@@ -211,36 +216,15 @@
                 </div>
             </div>
 
-            <!-- Big Green "Play Ranked" Button -->
-            <button id="btn-play-ranked" class="btn-play-ranked">
+            <!-- Big Green "Play Ranked" Hero Button -->
+            <button id="btn-play-ranked" class="btn-play-ranked" title="Online Competitive Ranked Matchmaking">
                 <div class="btn-ranked-title">
                     <span>▶ Play Ranked (Online)</span>
                 </div>
-                <div class="btn-ranked-sub">Live 1v1 online matchmaking</div>
+                <div class="btn-ranked-sub">Live 1v1 online matchmaking by rating</div>
             </button>
 
-            <!-- FRONT PAGE: BUILD ROOM & JOIN ROOM -->
-            <div class="front-room-section">
-                <div class="front-section-header">CUSTOM MULTIPLAYER ROOMS</div>
-                <div class="front-room-grid">
-                    <button id="btn-front-build-room" class="btn-front-room-build">
-                        <span class="front-room-icon">🏠</span>
-                        <div>
-                            <div class="front-room-btn-title">Build Room</div>
-                            <div class="front-room-btn-sub">Host 2P or 4P KOTH</div>
-                        </div>
-                    </button>
-                    <div class="front-room-join-card">
-                        <div class="front-join-label">JOIN VIA CODE</div>
-                        <div class="front-join-row">
-                            <input type="text" id="front-join-room-input" class="front-join-input" placeholder="FORT-1234" maxlength="10">
-                            <button id="btn-front-join-room-action" class="btn-front-join-submit">Join</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- FRONT PAGE: GAME MODES (Play Bot, King of the Hill, Puzzles, Local) -->
+            <!-- 1. MAIN GAME MODES (Play Bot, King of the Hill, Puzzles, Local, Watch) -->
             <div class="front-modes-section">
                 <div class="front-section-header">GAME MODES</div>
                 <div class="home-modes-container">
@@ -261,17 +245,17 @@
 
                     <!-- Row 2: Daily Puzzles, Pass & Play Local, Spectate Watch -->
                     <div class="home-modes-row-bottom">
-                        <div id="btn-puzzles-mode" class="btn-mode-card card-puzzles" title="Directly Play Today's Free Daily Puzzle">
+                        <div id="btn-puzzles-mode" class="btn-mode-card card-puzzles" title="Directly Play Today's Free Daily Tactical Puzzle">
                             <svg class="puzzle-icon" viewBox="0 0 24 24"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5s-1.12-2.5-2.5-2.5z"/></svg>
                             <span>Puzzles</span>
                         </div>
 
-                        <div id="btn-local-play" class="btn-mode-card">
+                        <div id="btn-local-play" class="btn-mode-card" title="Pass & Play on Same Device">
                             <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
                             <span>Pass & Play</span>
                         </div>
 
-                        <div id="btn-watch-mode" class="btn-mode-card">
+                        <div id="btn-watch-mode" class="btn-mode-card" title="Spectate Matches">
                             <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .89-2 2v12c0 1.1.89 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
                             <span>Spectate</span>
                         </div>
@@ -279,26 +263,175 @@
                 </div>
             </div>
 
-            <!-- Real Live Server Data Online Status -->
-            <div class="home-online-counter">
-                <span class="online-dot"></span>
-                <span id="real-stats-text">1 player online · 0 in game</span>
+            <!-- 2. CUSTOM MULTIPLAYER ROOMS (Positioned below Main Game Modes) -->
+            <div class="front-room-section">
+                <div class="front-section-header">CUSTOM MULTIPLAYER ROOMS</div>
+                <div class="front-room-grid">
+                    <button id="btn-front-build-room" class="btn-front-room-build">
+                        <span class="front-room-icon">🏠</span>
+                        <div>
+                            <div class="front-room-btn-title">Build Room</div>
+                            <div class="front-room-btn-sub">Host 2P or 4P KOTH</div>
+                        </div>
+                    </button>
+                    <div class="front-room-join-card">
+                        <div class="front-join-label">JOIN VIA CODE</div>
+                        <div class="front-join-row">
+                            <input type="text" id="front-join-room-input" class="front-join-input" placeholder="FORT-1234" maxlength="10">
+                            <button id="btn-front-join-room-action" class="btn-front-join-submit">Join</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. PUBLIC CUSTOM ROOM BROWSER -->
+            <div class="public-rooms-section">
+                <div class="public-rooms-header-row">
+                    <div class="front-section-header" style="margin-bottom: 0;">PUBLIC ROOMS</div>
+                    <button id="btn-refresh-public-rooms" class="btn-refresh-rooms-icon" title="Refresh public room list">
+                        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    </button>
+                </div>
+
+                <!-- Filter Pills -->
+                <div class="public-room-filters">
+                    <button class="public-filter-pill active" data-filter="all">All</button>
+                    <button class="public-filter-pill" data-filter="classic">Classic (2P)</button>
+                    <button class="public-filter-pill" data-filter="koth">King of Hill (4P)</button>
+                    <button class="public-filter-pill" data-filter="breaking">Breaking</button>
+                    <button class="public-filter-pill" data-filter="normal">Normal</button>
+                </div>
+
+                <!-- Dynamic Room List -->
+                <div id="public-rooms-list" class="public-rooms-list">
+                    <div class="public-rooms-empty">
+                        <div class="empty-icon">🌐</div>
+                        <div class="empty-title">No Open Public Rooms</div>
+                        <div class="empty-sub">Be the first to build a public room and challenge anyone online!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. REAL LIVE SEPARATED PLATFORM STATISTICS -->
+            <div class="platform-stats-footer">
+                <div class="platform-stat-item">
+                    <span class="stat-indicator-dot online"></span>
+                    <span id="stat-online-humans">1 Human Online</span>
+                </div>
+                <span class="stat-sep">·</span>
+                <div class="platform-stat-item">
+                    <span class="stat-indicator-dot bot"></span>
+                    <span id="stat-available-ai">100 AI Available</span>
+                </div>
+                <span class="stat-sep">·</span>
+                <div class="platform-stat-item">
+                    <span id="stat-active-matches">0 Matches Active</span>
+                </div>
             </div>
         </div>
 
         <!-- ========================================================
-             3. RANKED MATCHMAKING OVERLAY (REAL ONLINE MULTIPLAYER)
+             3. RANKED MATCHMAKING OVERLAY (HIGH-TECH RADAR + STAGES + VS)
              ======================================================== -->
         <div id="matchmaking-overlay" class="matchmaking-overlay" style="display: none;">
-            <div class="matchmaking-card">
-                <div class="matchmaking-radar-ring">
-                    <div class="matchmaking-pulse"></div>
-                    <div class="matchmaking-avatar">💎</div>
+            <!-- Searching State Card -->
+            <div id="matchmaking-search-card" class="matchmaking-card">
+                <!-- Header -->
+                <div class="mm-header-badge">RANKED MATCHMAKING</div>
+                <h3 class="matchmaking-title">Finding Opponent</h3>
+                <div id="mm-player-rating-chip" class="mm-rating-chip">💎 noob10001 (1200 ELO)</div>
+
+                <!-- High-Tech Radar Visual (No oversized emoji) -->
+                <div class="radar-scope-container">
+                    <div class="radar-concentric-1"></div>
+                    <div class="radar-concentric-2"></div>
+                    <div class="radar-concentric-3"></div>
+                    <div class="radar-crosshair-h"></div>
+                    <div class="radar-crosshair-v"></div>
+                    <div class="radar-scanner-sweep"></div>
+                    <div class="radar-center-blip"></div>
+                    <div class="radar-target-blip blip-1"></div>
+                    <div class="radar-target-blip blip-2"></div>
                 </div>
-                <h3 id="matchmaking-title" class="matchmaking-title">Finding Online Match...</h3>
-                <p id="matchmaking-status" class="matchmaking-sub">Searching for real online players...</p>
-                <button id="btn-ranked-bot-fallback" class="btn-create-game-action" style="display: none; margin-bottom: 12px; font-size: 0.85rem; padding: 10px; background: #3b82f6;">⚔️ Match with Challenging Bot</button>
+
+                <!-- Live Dynamic Info -->
+                <div class="mm-info-panel">
+                    <div class="mm-info-row">
+                        <span class="mm-info-label">Search Time</span>
+                        <span id="mm-search-timer" class="mm-info-val">0:00</span>
+                    </div>
+                    <div class="mm-info-row">
+                        <span class="mm-info-label">Rating Window</span>
+                        <span id="mm-rating-range" class="mm-info-val">1150 – 1250</span>
+                    </div>
+                    <div class="mm-info-row">
+                        <span class="mm-info-label">Queue Status</span>
+                        <span id="mm-queue-status" class="mm-info-val highlight">Searching active players...</span>
+                    </div>
+                </div>
+
+                <!-- Meaningful 5-Stage Indicator List -->
+                <div class="mm-stages-list">
+                    <div id="mm-stage-1" class="mm-stage-row active">
+                        <span class="mm-stage-dot"></span>
+                        <span class="mm-stage-text">1. Connecting to matchmaking</span>
+                    </div>
+                    <div id="mm-stage-2" class="mm-stage-row">
+                        <span class="mm-stage-dot"></span>
+                        <span class="mm-stage-text">2. Searching active queue</span>
+                    </div>
+                    <div id="mm-stage-3" class="mm-stage-row">
+                        <span class="mm-stage-dot"></span>
+                        <span class="mm-stage-text">3. Expanding rating range</span>
+                    </div>
+                    <div id="mm-stage-4" class="mm-stage-row">
+                        <span class="mm-stage-dot"></span>
+                        <span class="mm-stage-text">4. Opponent matched</span>
+                    </div>
+                    <div id="mm-stage-5" class="mm-stage-row">
+                        <span class="mm-stage-dot"></span>
+                        <span class="mm-stage-text">5. Initializing game board</span>
+                    </div>
+                </div>
+
+                <!-- Footer Action -->
                 <button id="btn-cancel-matchmaking" class="btn-cancel-search">Cancel Search</button>
+            </div>
+
+            <!-- Match Found VS Screen Card (Revealed upon match) -->
+            <div id="matchmaking-vs-card" class="matchmaking-vs-card" style="display: none;">
+                <div class="vs-banner-title">MATCH FOUND</div>
+                <div class="vs-mode-subtitle">Ranked 1v1 · Authoritative</div>
+
+                <div class="vs-matchup-container">
+                    <!-- Player 1 (You) -->
+                    <div class="vs-player-box vs-p1">
+                        <div class="vs-avatar blue-glow">
+                            <span class="vs-avatar-icon">🔷</span>
+                        </div>
+                        <div id="vs-p1-name" class="vs-player-name">noob10001</div>
+                        <div id="vs-p1-rating" class="vs-player-rating">1200 ELO</div>
+                        <span class="vs-role-tag you-tag">YOU</span>
+                    </div>
+
+                    <!-- Central VS Badge -->
+                    <div class="vs-center-badge">
+                        <span class="vs-text">VS</span>
+                        <div class="vs-lightning">⚡</div>
+                    </div>
+
+                    <!-- Player 2 (Opponent) -->
+                    <div class="vs-player-box vs-p2">
+                        <div class="vs-avatar red-glow">
+                            <span class="vs-avatar-icon">🔶</span>
+                        </div>
+                        <div id="vs-p2-name" class="vs-player-name">noob10042</div>
+                        <div id="vs-p2-rating" class="vs-player-rating">1215 ELO</div>
+                        <span id="vs-p2-badge" class="vs-role-tag opp-tag">OPPONENT</span>
+                    </div>
+                </div>
+
+                <div id="vs-countdown-text" class="vs-countdown-timer">Match starting in 2...</div>
             </div>
         </div>
 
@@ -327,13 +460,31 @@
                         <button id="btn-refresh-room-code" class="btn-copy-pill">New Code</button>
                     </div>
 
+                    <div class="sheet-form-label">ROOM TITLE (OPTIONAL)</div>
+                    <input type="text" id="custom-room-title-input" class="sheet-text-input" placeholder="e.g. Championship Arena, Blitz Duel..." maxlength="30">
+
+                    <div class="sheet-form-label">ROOM VISIBILITY</div>
+                    <div class="sheet-pills-row">
+                        <div class="sheet-choice-pill room-vis-pill selected" data-visibility="public">
+                            🌐 Public (Listed in Browser)
+                        </div>
+                        <div class="sheet-choice-pill room-vis-pill" data-visibility="private">
+                            🔒 Private (Invite Code Only)
+                        </div>
+                    </div>
+
+                    <div id="room-password-container" style="display: none; margin-top: 10px;">
+                        <div class="sheet-form-label">ROOM PASSWORD (OPTIONAL)</div>
+                        <input type="password" id="custom-room-password-input" class="sheet-text-input" placeholder="Leave empty for open room" maxlength="20">
+                    </div>
+
                     <div class="sheet-form-label">GAME TYPE</div>
                     <div class="sheet-mode-cards">
                         <div class="sheet-mode-box room-mode-box selected" data-mode="classic">
                             <svg viewBox="0 0 24 24"><path d="M19 22H5v-2h14v2zm-4-4H9v-2h6v2zm-1-4h-4V8h4v6zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/></svg>
                             <div>
                                 <div class="sheet-mode-text-title">Classic</div>
-                                <div class="sheet-mode-text-sub">2 players</div>
+                                <div class="sheet-mode-text-sub">2 players · 1v1</div>
                             </div>
                         </div>
 
@@ -341,7 +492,7 @@
                             <svg viewBox="0 0 24 24"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .55-.45 1-1 1H6c-.55 0-1-.45-1-1v-1h14v1z"/></svg>
                             <div>
                                 <div class="sheet-mode-text-title">King of the Hill</div>
-                                <div class="sheet-mode-text-sub">4 players</div>
+                                <div class="sheet-mode-text-sub">4 players · Center Crown</div>
                             </div>
                         </div>
                     </div>
@@ -367,8 +518,8 @@
                         <div class="sheet-choice-pill room-time-pill" data-sec="20">20s</div>
                         <div class="sheet-choice-pill room-time-pill selected" data-sec="30">30s</div>
                         <div class="sheet-choice-pill room-time-pill" data-sec="45">45s</div>
-                        <div class="sheet-choice-pill room-time-pill" data-sec="60">1+0</div>
-                        <div class="sheet-choice-pill room-time-pill" data-sec="180">3+0</div>
+                        <div class="sheet-choice-pill room-time-pill" data-sec="60">1 min</div>
+                        <div class="sheet-choice-pill room-time-pill" data-sec="180">3 min</div>
                     </div>
 
                     <div class="sheet-form-label">INITIAL BARRICADES</div>
@@ -382,12 +533,20 @@
                     <div class="sheet-form-label">PLAY AS</div>
                     <div class="sheet-pills-row">
                         <div class="sheet-choice-pill room-color-pill selected" data-color="blue">
-                            <span class="color-dot-indicator blue-dot"></span> Blue
+                            <span class="color-dot-indicator blue-dot"></span> Blue (Host)
                         </div>
                         <div class="sheet-choice-pill room-color-pill" data-color="red">
                             <span class="color-dot-indicator red-dot"></span> Red
                         </div>
                         <div class="sheet-choice-pill room-color-pill" data-color="random">Random</div>
+                    </div>
+
+                    <!-- Live Configuration Summary Preview Card -->
+                    <div class="room-summary-preview-card">
+                        <div class="preview-header">ROOM CONFIGURATION SUMMARY</div>
+                        <div id="room-config-preview-text" class="preview-content">
+                            Classic (2P) · Breaking (Cost 5) · 30s Turn · 10 Barricades · Public Room
+                        </div>
                     </div>
 
                     <button id="btn-build-and-host" class="btn-create-game-action">Build & Host Room</button>
@@ -396,9 +555,14 @@
                 <!-- Tab 2: Join Existing Room -->
                 <div id="tab-content-join-room" class="tab-content-panel" style="display: none;">
                     <div class="sheet-form-label">ENTER ROOM CODE</div>
-                    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                         <input type="text" id="join-room-input" class="sheet-text-input" placeholder="e.g. FORT-8291" maxlength="10">
                         <button id="btn-join-room-action" class="btn-create-game-action" style="width: auto; padding: 0 20px; margin: 0;">Join</button>
+                    </div>
+
+                    <div id="join-room-password-box" style="display: none; margin-bottom: 12px;">
+                        <div class="sheet-form-label">ROOM PASSWORD (IF PROTECTED)</div>
+                        <input type="password" id="join-room-password-input" class="sheet-text-input" placeholder="Enter password..." maxlength="20">
                     </div>
 
                     <div class="sheet-form-label">LOCAL MULTIPLAYER</div>
@@ -473,12 +637,19 @@
                 <div class="sheet-handle-bar"></div>
 
                 <div class="sheet-header-title">
-                    <span>🤖 Play vs Bot</span>
+                    <span>🤖 Play vs Computer</span>
                     <button id="btn-close-bot-sheet" class="sheet-close-x close-modal-trigger">&times;</button>
                 </div>
 
-                <!-- BOT DIFFICULTY (4 Levels) -->
-                <div class="sheet-form-label">BOT DIFFICULTY</div>
+                <!-- 1. GAMEPLAY MODE (Normal vs Barricade Breaking) -->
+                <div class="sheet-form-label">1. GAMEPLAY MODE</div>
+                <div class="sheet-pills-row">
+                    <div class="sheet-choice-pill bot-gameplay-pill" data-gameplay="normal">Normal (No Breaking)</div>
+                    <div class="sheet-choice-pill bot-gameplay-pill selected" data-gameplay="breaking">💥 Barricade Breaking</div>
+                </div>
+
+                <!-- 2. AI DIFFICULTY (Always visible & selectable in BOTH modes!) -->
+                <div class="sheet-form-label">2. AI DIFFICULTY</div>
                 <div class="sheet-pills-row">
                     <div class="sheet-choice-pill diff-pill" data-diff="easy">Easy</div>
                     <div class="sheet-choice-pill diff-pill selected" data-diff="medium">Medium</div>
@@ -486,8 +657,8 @@
                     <div class="sheet-choice-pill diff-pill" data-diff="impossible">Impossible 🔥</div>
                 </div>
 
-                <!-- GAME MODE (Classic vs King of Hill) -->
-                <div class="sheet-form-label">GAME MODE</div>
+                <!-- 3. GAME TYPE (Classic vs King of Hill) -->
+                <div class="sheet-form-label">3. GAME TYPE</div>
                 <div class="sheet-mode-cards">
                     <div class="sheet-mode-box bot-mode-box selected" data-mode="classic">
                         <svg viewBox="0 0 24 24"><path d="M19 22H5v-2h14v2zm-4-4H9v-2h6v2zm-1-4h-4V8h4v6zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/></svg>
@@ -506,15 +677,18 @@
                     </div>
                 </div>
 
-                <!-- GAMEPLAY MODE (Normal vs Barricade Breaking) -->
-                <div class="sheet-form-label">GAMEPLAY MODE</div>
+                <!-- 4. INITIAL BARRICADES -->
+                <div class="sheet-form-label">4. INITIAL BARRICADES</div>
                 <div class="sheet-pills-row">
-                    <div class="sheet-choice-pill bot-gameplay-pill" data-gameplay="normal">Normal (No Breaking)</div>
-                    <div class="sheet-choice-pill bot-gameplay-pill selected" data-gameplay="breaking">💥 Barricade Breaking</div>
+                    <div class="sheet-choice-pill bot-wall-pill" data-walls="5">Quick · 5</div>
+                    <div class="sheet-choice-pill bot-wall-pill" data-walls="7">Standard · 7</div>
+                    <div class="sheet-choice-pill bot-wall-pill" data-walls="9">Chaos · 9</div>
+                    <div class="sheet-choice-pill bot-wall-pill selected" data-walls="10">Classic · 10</div>
                 </div>
 
+                <!-- 5. BREAKING COST (Only visible when Barricade Breaking is selected) -->
                 <div id="bot-break-cost-section" class="break-cost-options-row">
-                    <div class="sheet-form-label">BREAKING COST</div>
+                    <div class="sheet-form-label">5. BREAKING COST</div>
                     <div class="sheet-pills-row">
                         <div class="sheet-choice-pill bot-break-cost-pill" data-cost="3">3 Barricades</div>
                         <div class="sheet-choice-pill bot-break-cost-pill selected" data-cost="5">5 Barricades (Default)</div>
@@ -522,19 +696,29 @@
                     </div>
                 </div>
 
-                <!-- PLAY AS -->
-                <div class="sheet-form-label">PLAY AS</div>
+                <!-- 6. TURN TIMER -->
+                <div class="sheet-form-label">6. TURN TIMER</div>
+                <div class="sheet-pills-row">
+                    <div class="sheet-choice-pill bot-time-pill" data-sec="15">15s Blitz</div>
+                    <div class="sheet-choice-pill bot-time-pill" data-sec="30">30s Rapid</div>
+                    <div class="sheet-choice-pill bot-time-pill" data-sec="45">45s</div>
+                    <div class="sheet-choice-pill bot-time-pill" data-sec="60">1 min</div>
+                    <div class="sheet-choice-pill bot-time-pill selected" data-sec="180">3 min Standard</div>
+                </div>
+
+                <!-- 7. PLAY AS -->
+                <div class="sheet-form-label">7. PLAY AS</div>
                 <div class="sheet-pills-row">
                     <div class="sheet-choice-pill bot-color-pill selected" data-color="blue">
-                        <span class="color-dot-indicator blue-dot"></span> Blue
+                        <span class="color-dot-indicator blue-dot"></span> Blue (First)
                     </div>
                     <div class="sheet-choice-pill bot-color-pill" data-color="red">
-                        <span class="color-dot-indicator red-dot"></span> Red
+                        <span class="color-dot-indicator red-dot"></span> Red (Second)
                     </div>
                     <div class="sheet-choice-pill bot-color-pill" data-color="random">Random</div>
                 </div>
 
-                <!-- Start Bot Match Action Button -->
+                <!-- 8. START BOT MATCH BUTTON -->
                 <button id="btn-start-bot-match" class="btn-create-game-action">▶ Start Bot Match</button>
             </div>
         </div>
@@ -581,15 +765,33 @@
         <div id="gameover-sheet" class="modal-bottom-sheet-overlay">
             <div class="sheet-container-card" style="text-align: center;">
                 <div class="sheet-handle-bar"></div>
+                <div id="gameover-banner-icon" style="font-size: 2.2rem; margin-bottom: 6px;">🏆</div>
                 <h2 id="gameover-winner-title" style="font-size: 1.6rem; font-weight: 900; margin-bottom: 4px;">Victory!</h2>
-                <p id="gameover-reason-sub" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Reached the goal line</p>
+                <p id="gameover-reason-sub" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">Reached the goal line</p>
 
-                <div id="gameover-rating-change" class="gameover-rating-change rating-win">+30</div>
-                <p style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 20px;">Ranked Match Rating</p>
+                <!-- Match Stats Card -->
+                <div class="gameover-stats-card">
+                    <div class="go-stat-row">
+                        <span class="go-stat-label">Opponent</span>
+                        <span id="gameover-opponent-name" class="go-stat-val">noob10042</span>
+                    </div>
+                    <div class="go-stat-row">
+                        <span class="go-stat-label">Rating Change</span>
+                        <span id="gameover-rating-change" class="gameover-rating-chip rating-win">1200 → 1230 (+30)</span>
+                    </div>
+                    <div class="go-stat-row">
+                        <span class="go-stat-label">Total Turns</span>
+                        <span id="gameover-turns-count" class="go-stat-val">28 turns</span>
+                    </div>
+                    <div class="go-stat-row">
+                        <span class="go-stat-label">Match Duration</span>
+                        <span id="gameover-duration-val" class="go-stat-val">1m 45s</span>
+                    </div>
+                </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-create-game-action close-modal-trigger" onclick="(window.fortivexApp || window.barricadeApp).startNewMatch();" style="flex:1;">Rematch</button>
-                    <button class="btn-create-game-action close-modal-trigger" onclick="(window.fortivexApp || window.barricadeApp).switchView('home');" style="flex:1; background:#334155;">Lobby</button>
+                <div style="display: flex; gap: 10px; margin-top: 14px;">
+                    <button id="btn-gameover-rematch" class="btn-create-game-action close-modal-trigger" style="flex:1;">Rematch</button>
+                    <button id="btn-gameover-lobby" class="btn-create-game-action close-modal-trigger" style="flex:1; background:#334155;">Lobby</button>
                 </div>
             </div>
         </div>
@@ -605,9 +807,9 @@
     </div>
 
     <!-- Scripts with Cache-Busting -->
-    <script src="audio.js?v=2.0.0"></script>
-    <script src="game.js?v=2.0.0"></script>
-    <script src="ai.js?v=2.0.0"></script>
-    <script src="ui.js?v=2.0.0"></script>
+    <script src="audio.js?v=2.0.2"></script>
+    <script src="game.js?v=2.0.2"></script>
+    <script src="ai.js?v=2.0.2"></script>
+    <script src="ui.js?v=2.0.2"></script>
 </body>
 </html>
