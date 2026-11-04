@@ -1403,10 +1403,21 @@ class BarricadeUI {
         // In PvE mode, if active turn is NOT human player, let AI play!
         const humanRole = this.myPlayerRole || 1;
         if (this.playType === 'pve' && this.game.turn !== humanRole) {
+            const activeBotTurn = this.game.turn;
             this.isAiThinking = true;
 
+            const botBox = (activeBotTurn === 2) ? this.p2Box : (activeBotTurn === 3 ? this.p3Box : this.p4Box);
+            if (botBox) botBox.classList.add('ai-thinking');
+
+            const diffDelays = {
+                easy: 260,
+                medium: 400,
+                hard: 550,
+                impossible: 720
+            };
+            const thinkingDelay = diffDelays[this.selectedBotDiff || 'medium'] || 400;
+
             setTimeout(() => {
-                const activeBotTurn = this.game.turn;
                 const aiMove = this.ai.chooseMove(this.game, activeBotTurn);
                 if (aiMove) {
                     if (aiMove.type === 'move') {
@@ -1418,11 +1429,13 @@ class BarricadeUI {
                         this.game.placeWall(aiMove.gx, aiMove.gy, aiMove.orientation);
                         sounds.playWallPlace();
                     } else if (aiMove.type === 'break') {
+                        const cost = this.game.breakCost || 5;
                         this.game.breakWall(aiMove.wallIndex, activeBotTurn);
                         sounds.playIllegal();
-                        this.showToast(`💥 Bot smashed barricade (-5 walls)!`);
+                        this.showToast(`💥 Bot smashed barricade (-${cost} walls)!`);
                     }
                 }
+                if (botBox) botBox.classList.remove('ai-thinking');
                 this.isAiThinking = false;
                 this.render();
                 sounds.playTurnStart();
@@ -1431,7 +1444,7 @@ class BarricadeUI {
                 if (!this.game.winner && this.playType === 'pve' && this.game.turn !== humanRole) {
                     setTimeout(() => this.triggerAiTurnIfNeeded(), 450);
                 }
-            }, 380);
+            }, thinkingDelay);
         }
     }
 

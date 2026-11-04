@@ -144,6 +144,27 @@ class BarricadeGame {
         };
     }
 
+    clone() {
+        const copy = Object.create(BarricadeGame.prototype);
+        copy.boardSize = this.boardSize || 9;
+        copy.gameMode = this.gameMode;
+        copy.gameplayMode = this.gameplayMode || 'breaking';
+        copy.breakCost = this.breakCost || 5;
+        copy.initialWalls = this.initialWalls;
+        copy.timeControl = { ...(this.timeControl || { baseSec: 180, incrementSec: 2 }) };
+        copy.numPlayers = this.numPlayers || (this.gameMode === 'koth' ? 4 : 2);
+        copy.pawns = this.pawns.map(p => p ? { x: p.x, y: p.y } : null);
+        copy.playerWalls = [...this.playerWalls];
+        copy.playerTimeLeft = [...this.playerTimeLeft];
+        copy.turn = this.turn;
+        copy.walls = this.walls.map(w => ({ gx: w.gx, gy: w.gy, orientation: w.orientation, player: w.player, isBroken: !!w.isBroken }));
+        copy.winner = this.winner;
+        copy.winReason = this.winReason;
+        copy.moveLog = [];
+        copy.history = [];
+        return copy;
+    }
+
     serialize() {
         return {
             boardSize: this.boardSize,
