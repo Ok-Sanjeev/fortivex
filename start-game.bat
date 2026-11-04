@@ -1,9 +1,9 @@
 @echo off
-title Barricade Server
+title FORTIVEX Server
 cd /d "%~dp0"
 cls
 echo ====================================================
-echo Starting Barricade Game Server...
+echo Starting FORTIVEX Game Server...
 echo ====================================================
 node server.js
 if %errorlevel% neq 0 (

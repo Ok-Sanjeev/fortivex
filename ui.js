@@ -58,30 +58,31 @@ class BarricadeUI {
     }
 
     initUserAccount() {
-        let storedUser = localStorage.getItem('barricade_username');
-        let storedSignedIn = localStorage.getItem('barricade_signed_in') === 'true';
+        let storedUser = localStorage.getItem('fortivex_username') || localStorage.getItem('barricade_username');
+        let storedSignedIn = (localStorage.getItem('fortivex_signed_in') || localStorage.getItem('barricade_signed_in')) === 'true';
 
-        if (!storedUser) {
-            const randomSuffix = Math.floor(100000 + Math.random() * 900000);
-            storedUser = `user_${randomSuffix}`;
-            localStorage.setItem('barricade_username', storedUser);
-            localStorage.setItem('barricade_signed_in', 'false');
+        // Default sequential username starts at noob10001
+        if (!storedUser || storedUser.startsWith('user_')) {
+            storedUser = 'noob10001';
+            localStorage.setItem('fortivex_username', storedUser);
+            localStorage.setItem('fortivex_signed_in', 'false');
             this.isSignedIn = false;
         } else {
             this.isSignedIn = storedSignedIn;
+            localStorage.setItem('fortivex_username', storedUser);
         }
 
         this.username = storedUser;
-        this.userRating = parseInt(localStorage.getItem('barricade_elo') || '1385', 10);
+        this.userRating = parseInt(localStorage.getItem('fortivex_elo') || localStorage.getItem('barricade_elo') || '1385', 10);
 
         // Individual streak tracked per user: defaults to 0 for users unless accumulated
-        const streakKey = `barricade_streak_${this.username}`;
-        const storedStreak = localStorage.getItem(streakKey);
+        const streakKey = `fortivex_streak_${this.username}`;
+        const storedStreak = localStorage.getItem(streakKey) || localStorage.getItem(`barricade_streak_${this.username}`);
         this.userStreak = storedStreak !== null ? parseInt(storedStreak, 10) : 0;
 
         // Client ID for real server heartbeat and room tracking
-        this.clientId = localStorage.getItem('barricade_client_id') || ('c_' + Math.random().toString(36).substring(2, 10));
-        localStorage.setItem('barricade_client_id', this.clientId);
+        this.clientId = localStorage.getItem('fortivex_client_id') || localStorage.getItem('barricade_client_id') || ('c_' + Math.random().toString(36).substring(2, 10));
+        localStorage.setItem('fortivex_client_id', this.clientId);
 
         // Room and Online Multiplayer state
         this.activeRoomCode = null;
@@ -636,7 +637,7 @@ class BarricadeUI {
     // BUILD ROOM & JOIN ROOM FLOW
     // ==========================================
     openFriendsSheet(activeTab = 'build', prefillCode = '') {
-        const randCode = 'BARR-' + Math.floor(1000 + Math.random() * 9000);
+        const randCode = 'FORT-' + Math.floor(1000 + Math.random() * 9000);
         const codeEl = document.getElementById('display-room-code');
         if (codeEl) codeEl.textContent = randCode;
 
@@ -669,8 +670,10 @@ class BarricadeUI {
     }
 
     buildAndHostRoom() {
-        const code = document.getElementById('display-room-code')?.textContent.trim() || ('BARR-' + Math.floor(1000 + Math.random() * 9000));
+        const code = document.getElementById('display-room-code')?.textContent.trim() || ('FORT-' + Math.floor(1000 + Math.random() * 9000));
         const mode = document.querySelector('.room-mode-box.selected')?.dataset.mode || 'classic';
+        const gameplayMode = document.querySelector('.room-gameplay-pill.selected')?.dataset.gameplay || 'breaking';
+        const breakCost = parseInt(document.querySelector('.room-break-cost-pill.selected')?.dataset.cost || '5', 10);
         const timeSec = parseInt(document.querySelector('.room-time-pill.selected')?.dataset.sec || '30', 10);
         const walls = parseInt(document.querySelector('.room-wall-pill.selected')?.dataset.walls || (mode === 'koth' ? '5' : '10'), 10);
         const colorChoice = document.querySelector('.room-color-pill.selected')?.dataset.color || 'blue';
@@ -682,7 +685,7 @@ class BarricadeUI {
             body: JSON.stringify({
                 code: code,
                 hostName: this.username,
-                settings: { mode, timeSec, walls, hostColor }
+                settings: { mode, gameplayMode, breakCost, timeSec, walls, hostColor }
             })
         })
         .then(res => res.json())
@@ -691,7 +694,7 @@ class BarricadeUI {
                 this.friendsSheet.classList.remove('open');
                 this.activeRoomCode = code;
                 this.myPlayerRole = (hostColor === 'blue') ? 1 : 2;
-                this.showRoomLobbyOverlay(code, { mode, timeSec, walls, hostColor });
+                this.showRoomLobbyOverlay(code, { mode, gameplayMode, breakCost, timeSec, walls, hostColor });
             } else {
                 this.showToast(data.error || 'Failed to create room');
             }
@@ -726,7 +729,9 @@ class BarricadeUI {
                         this.startNewMatch({
                             mode: settings.mode,
                             initialWalls: settings.walls,
-                            timeSec: settings.timeSec
+                            timeSec: settings.timeSec,
+                            gameplayMode: settings.gameplayMode || 'breaking',
+                            breakCost: settings.breakCost || 5
                         });
                         this.startOnlineMovePolling();
                     }
@@ -773,7 +778,9 @@ class BarricadeUI {
                 this.startNewMatch({
                     mode: room.settings?.mode || 'classic',
                     initialWalls: room.settings?.walls || (room.settings?.mode === 'koth' ? 5 : 10),
-                    timeSec: room.settings?.timeSec || 30
+                    timeSec: room.settings?.timeSec || 30,
+                    gameplayMode: room.settings?.gameplayMode || 'breaking',
+                    breakCost: room.settings?.breakCost || 5
                 });
                 this.startOnlineMovePolling();
             } else {
@@ -855,14 +862,21 @@ class BarricadeUI {
     // ==========================================
     toggleBreakMode() {
         if (this.game.winner || this.isAiThinking) return;
+        if (this.game.gameplayMode === 'normal') {
+            this.showToast("Barricade breaking is disabled in Normal mode");
+            sounds.playIllegal();
+            return;
+        }
+
         if (this.playType === 'online_pvp' && this.game.turn !== this.myPlayerRole) {
             this.showToast("Waiting for your turn...");
             return;
         }
 
+        const cost = this.game.breakCost || 5;
         const currentWalls = this.game.playerWalls[this.game.turn];
-        if (currentWalls < 5) {
-            this.showToast("Breaking a barricade requires 5 barricades!");
+        if (currentWalls < cost) {
+            this.showToast(`Breaking a barricade requires ${cost} barricades!`);
             sounds.playIllegal();
             return;
         }
@@ -874,7 +888,7 @@ class BarricadeUI {
             this.btnOrientV?.classList.remove('active');
             this.btnBreakWall?.classList.add('active');
             sounds.playRotate();
-            this.showToast("💥 Tap any placed barricade to smash it (-5 walls)!");
+            this.showToast(`💥 Tap any placed barricade to smash it (-${cost} walls)!`);
         } else {
             this.btnBreakWall?.classList.remove('active');
             sounds.playRotate();
@@ -882,9 +896,16 @@ class BarricadeUI {
     }
 
     executeBreakWall(wallIndex) {
+        if (this.game.gameplayMode === 'normal') {
+            this.showToast("Barricade breaking is disabled in Normal mode");
+            sounds.playIllegal();
+            return;
+        }
+
+        const cost = this.game.breakCost || 5;
         if (!this.isBreakMode) {
-            if (this.game.playerWalls[this.game.turn] < 5) {
-                this.showToast("💥 Breaking a barricade requires 5 barricades!");
+            if (this.game.playerWalls[this.game.turn] < cost) {
+                this.showToast(`💥 Breaking a barricade requires ${cost} barricades!`);
                 sounds.playIllegal();
                 return;
             }
@@ -895,7 +916,7 @@ class BarricadeUI {
             this.vibrate([40, 40, 60]);
             this.isBreakMode = false;
             this.btnBreakWall?.classList.remove('active');
-            this.showToast("💥 Barricade smashed! Rubble permanently blocks new walls.");
+            this.showToast(`💥 Barricade smashed (-${cost} walls)! Rubble permanently blocks new walls.`);
 
             if (this.playType === 'online_pvp') {
                 this.broadcastLocalMove({ type: 'break', wallIndex });
@@ -1578,6 +1599,8 @@ class BarricadeUI {
         this.botSheet?.classList.remove('open');
         const diff = document.querySelector('#bot-sheet .diff-pill.selected')?.dataset.diff || 'medium';
         const mode = document.querySelector('#bot-sheet .bot-mode-box.selected')?.dataset.mode || 'classic';
+        const gameplayMode = document.querySelector('#bot-sheet .bot-gameplay-pill.selected')?.dataset.gameplay || 'breaking';
+        const breakCost = parseInt(document.querySelector('#bot-sheet .bot-break-cost-pill.selected')?.dataset.cost || '5', 10);
         const colorChoice = document.querySelector('#bot-sheet .bot-color-pill.selected')?.dataset.color || 'blue';
         const myColor = (colorChoice === 'random') ? (Math.random() < 0.5 ? 'blue' : 'red') : colorChoice;
 
@@ -1607,6 +1630,8 @@ class BarricadeUI {
         const initialWalls = (mode === 'koth') ? 5 : 10;
         this.startNewMatch({
             mode: mode,
+            gameplayMode: gameplayMode,
+            breakCost: breakCost,
             initialWalls: initialWalls,
             timeSec: 300
         });
@@ -1620,10 +1645,14 @@ class BarricadeUI {
 
     startNewMatch(opts = {}) {
         const mode = opts.mode || 'classic';
+        const gameplayMode = opts.gameplayMode || 'breaking';
+        const breakCost = opts.breakCost !== undefined ? opts.breakCost : 5;
         const initialWalls = opts.initialWalls !== undefined ? opts.initialWalls : (mode === 'koth' ? 5 : 10);
 
         this.game = new BarricadeGame({
             gameMode: mode,
+            gameplayMode: gameplayMode,
+            breakCost: breakCost,
             initialWalls: initialWalls,
             timeControl: { initialSec: opts.timeSec || 180, incrementSec: 0 }
         });
@@ -1636,6 +1665,17 @@ class BarricadeUI {
         this.btnOrientV?.classList.remove('active');
         this.btnBreakWall?.classList.remove('active');
         this.hideGhostWall();
+
+        // Update Break Wall Button visibility & label based on gameplayMode
+        if (this.btnBreakWall) {
+            if (this.game.gameplayMode === 'normal') {
+                this.btnBreakWall.style.display = 'none';
+            } else {
+                this.btnBreakWall.style.display = 'inline-flex';
+                const textSpan = this.btnBreakWall.querySelector('span:not(.pill-icon-break)');
+                if (textSpan) textSpan.textContent = `Break (-${this.game.breakCost})`;
+            }
+        }
 
         this.switchView('game');
         sounds.playTurnStart();
@@ -1840,12 +1880,17 @@ class BarricadeUI {
                     this.showToast('🧱 Rubble permanently blocks new barricades');
                     return;
                 }
+                if (this.game.gameplayMode === 'normal') {
+                    this.showToast('Barricade breaking is disabled in Normal mode');
+                    return;
+                }
+                const cost = this.game.breakCost || 5;
                 if (this.isBreakMode) {
                     this.executeBreakWall(idx);
-                } else if (this.game.playerWalls[this.game.turn] >= 5) {
+                } else if (this.game.playerWalls[this.game.turn] >= cost) {
                     this.executeBreakWall(idx);
                 } else {
-                    this.showToast('💥 Smasher: Breaking a barricade costs 5 walls!');
+                    this.showToast(`💥 Smasher: Breaking a barricade costs ${cost} walls!`);
                     sounds.playIllegal();
                 }
             });
@@ -1979,6 +2024,39 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.bot-color-pill').forEach(p => {
         p.addEventListener('click', () => {
             document.querySelectorAll('.bot-color-pill').forEach(x => x.classList.remove('selected'));
+            p.classList.add('selected');
+        });
+    });
+
+    // Gameplay Mode (Normal vs Barricade Breaking) Pills
+    document.querySelectorAll('.room-gameplay-pill').forEach(p => {
+        p.addEventListener('click', () => {
+            document.querySelectorAll('.room-gameplay-pill').forEach(x => x.classList.remove('selected'));
+            p.classList.add('selected');
+            const costSec = document.getElementById('room-break-cost-section');
+            if (costSec) costSec.style.display = (p.dataset.gameplay === 'normal') ? 'none' : 'block';
+        });
+    });
+
+    document.querySelectorAll('.room-break-cost-pill').forEach(p => {
+        p.addEventListener('click', () => {
+            document.querySelectorAll('.room-break-cost-pill').forEach(x => x.classList.remove('selected'));
+            p.classList.add('selected');
+        });
+    });
+
+    document.querySelectorAll('.bot-gameplay-pill').forEach(p => {
+        p.addEventListener('click', () => {
+            document.querySelectorAll('.bot-gameplay-pill').forEach(x => x.classList.remove('selected'));
+            p.classList.add('selected');
+            const costSec = document.getElementById('bot-break-cost-section');
+            if (costSec) costSec.style.display = (p.dataset.gameplay === 'normal') ? 'none' : 'block';
+        });
+    });
+
+    document.querySelectorAll('.bot-break-cost-pill').forEach(p => {
+        p.addEventListener('click', () => {
+            document.querySelectorAll('.bot-break-cost-pill').forEach(x => x.classList.remove('selected'));
             p.classList.add('selected');
         });
     });

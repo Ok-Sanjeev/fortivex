@@ -1,7 +1,7 @@
 {
-  "name": "Barricade - Strategy Board Game",
-  "short_name": "Barricade",
-  "description": "Tactical abstract strategy board game. Race across the grid and place barricades to outsmart your opponent.",
+  "name": "Fortivex — Online Strategy Board Game",
+  "short_name": "Fortivex",
+  "description": "Fortivex: Competitive multiplayer strategy board game. Outsmart opponents with barricade placement, tactical breaks, and 4-player King of the Hill.",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",

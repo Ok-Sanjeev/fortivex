@@ -148,7 +148,7 @@ const server = http.createServer((req, res) => {
             // If another real player is in queue, pair them immediately!
             if (rankedQueue.length > 0) {
                 const opp = rankedQueue.shift();
-                const roomCode = 'RANK-' + Math.floor(1000 + Math.random() * 9000);
+                const roomCode = 'FORT-R' + Math.floor(1000 + Math.random() * 9000);
 
                 const room = {
                     code: roomCode,
@@ -366,7 +366,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, HOST, () => {
     console.log('====================================================');
-    console.log('🎮 BARRICADE GAME & MULTIPLAYER SERVER ACTIVE!');
+    console.log('🎮 FORTIVEX MULTIPLAYER SERVER ACTIVE!');
     console.log('');
     console.log(`📱 On your Phone:   http://192.168.31.162:${PORT}`);
     console.log(`💻 On this PC:     http://localhost:${PORT}`);

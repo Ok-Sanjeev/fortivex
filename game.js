@@ -8,6 +8,8 @@ class BarricadeGame {
     constructor(options = {}) {
         this.boardSize = 9;
         this.gameMode = options.gameMode || 'classic'; // 'classic' (2 players) or 'koth' (4 players)
+        this.gameplayMode = options.gameplayMode || 'breaking'; // 'normal' (no breaking) or 'breaking' (breaking enabled)
+        this.breakCost = [3, 5, 7].includes(parseInt(options.breakCost, 10)) ? parseInt(options.breakCost, 10) : 5;
         this.numPlayers = (this.gameMode === 'koth') ? 4 : 2;
         this.initialWalls = options.initialWalls !== undefined ? options.initialWalls : (this.numPlayers === 4 ? 5 : 10);
         this.timeControl = options.timeControl || { initialSec: 180, incrementSec: 0 };
@@ -128,6 +130,8 @@ class BarricadeGame {
     cloneState() {
         return {
             gameMode: this.gameMode,
+            gameplayMode: this.gameplayMode,
+            breakCost: this.breakCost,
             numPlayers: this.numPlayers,
             pawns: this.pawns.map(p => p ? { ...p } : null),
             playerWalls: [...this.playerWalls],
@@ -138,6 +142,49 @@ class BarricadeGame {
             winReason: this.winReason,
             moveLog: [...this.moveLog]
         };
+    }
+
+    serialize() {
+        return {
+            boardSize: this.boardSize,
+            gameMode: this.gameMode,
+            gameplayMode: this.gameplayMode,
+            breakCost: this.breakCost,
+            numPlayers: this.numPlayers,
+            initialWalls: this.initialWalls,
+            timeControl: { ...this.timeControl },
+            pawns: this.pawns.map(p => p ? { ...p } : null),
+            playerWalls: [...this.playerWalls],
+            playerTimeLeft: [...this.playerTimeLeft],
+            turn: this.turn,
+            walls: this.walls.map(w => ({ ...w })),
+            winner: this.winner,
+            winReason: this.winReason,
+            moveLog: [...this.moveLog]
+        };
+    }
+
+    static deserialize(data) {
+        if (!data) return null;
+        const game = new BarricadeGame({
+            gameMode: data.gameMode,
+            gameplayMode: data.gameplayMode,
+            breakCost: data.breakCost,
+            initialWalls: data.initialWalls,
+            timeControl: data.timeControl
+        });
+        game.boardSize = data.boardSize || 9;
+        game.numPlayers = data.numPlayers || (data.gameMode === 'koth' ? 4 : 2);
+        game.pawns = data.pawns.map(p => p ? { ...p } : null);
+        game.playerWalls = [...data.playerWalls];
+        game.playerTimeLeft = [...data.playerTimeLeft];
+        game.turn = data.turn;
+        game.walls = (data.walls || []).map(w => ({ ...w }));
+        game.winner = data.winner;
+        game.winReason = data.winReason;
+        game.moveLog = [...(data.moveLog || [])];
+        game.history = [{ state: game.cloneState(), actionDesc: 'Restored State' }];
+        return game;
     }
 
     saveState(actionDesc) {
@@ -153,6 +200,8 @@ class BarricadeGame {
         const last = this.history[this.history.length - 1];
 
         this.gameMode = last.state.gameMode;
+        this.gameplayMode = last.state.gameplayMode || 'breaking';
+        this.breakCost = last.state.breakCost || 5;
         this.numPlayers = last.state.numPlayers;
         this.pawns = last.state.pawns.map(p => p ? { ...p } : null);
         this.playerWalls = [...last.state.playerWalls];
@@ -472,15 +521,20 @@ class BarricadeGame {
     }
 
     // ==========================================
-    // THE DIFFERENTIATOR: BREAK WALL MECHANIC (-5 COST)
+    // THE DIFFERENTIATOR: BREAK WALL MECHANIC (-3, -5, or -7 COST)
     // ==========================================
     breakWall(wallIndex, player = this.turn) {
         if (this.winner) return { success: false, reason: 'Game over' };
         if (this.turn !== player) return { success: false, reason: 'Not your turn' };
 
+        if (this.gameplayMode === 'normal') {
+            return { success: false, reason: 'Barricade breaking is disabled in Normal mode' };
+        }
+
+        const cost = this.breakCost || 5;
         const currentWalls = this.playerWalls[player];
-        if (currentWalls < 5) {
-            return { success: false, reason: 'Breaking a barricade requires 5 barricades!' };
+        if (currentWalls < cost) {
+            return { success: false, reason: `Breaking a barricade requires ${cost} barricades!` };
         }
 
         if (wallIndex < 0 || wallIndex >= this.walls.length) {
@@ -492,8 +546,8 @@ class BarricadeGame {
             return { success: false, reason: 'This barricade is already broken!' };
         }
 
-        // Deduct 5 walls from player
-        this.playerWalls[player] -= 5;
+        // Deduct configured breakCost from player's own inventory
+        this.playerWalls[player] -= cost;
         wall.isBroken = true;
         wall.brokenBy = player;
 
@@ -506,6 +560,7 @@ class BarricadeGame {
             type: 'break',
             desc: actionDesc,
             wallIndex,
+            cost: cost,
             wall: { ...wall }
         });
 
@@ -513,7 +568,7 @@ class BarricadeGame {
         this.turn = (this.turn % this.numPlayers) + 1;
         this.saveState(`P${activeTurn}: ${actionDesc}`);
 
-        return { success: true, wall };
+        return { success: true, wall, cost };
     }
 
     resign(player = this.turn) {

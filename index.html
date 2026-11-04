@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#121214">
-    <title>Barricade</title>
+    <title>FORTIVEX — Online Strategy Board Game</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%23f59e0b'/><path d='M6 6h12v4H6zm0 8h12v4H6z' fill='%23121214'/></svg>">
@@ -174,11 +174,11 @@
         <div id="home-screen-view" class="home-screen-view" style="display: none;">
             <!-- Home Header -->
             <div class="home-top-bar">
-                <div class="home-logo-title">Barricade</div>
+                <div class="home-logo-title">FORTIVEX</div>
                 <div class="home-user-badges">
                     <div id="home-user-badge" class="home-badge" title="Click to Sign in / Choose Name" style="cursor: pointer;">
                         <span class="badge-icon">💎</span>
-                        <span id="home-username-text">user_098765</span>
+                        <span id="home-username-text">noob10001</span>
                         <span id="home-elo-badge" class="home-elo-chip">1385</span>
                     </div>
                     <button id="home-signin-prompt" class="btn-signin-pill" title="Claim your unique username">Sign in</button>
@@ -211,7 +211,7 @@
                     <div class="front-room-join-card">
                         <div class="front-join-label">JOIN VIA CODE</div>
                         <div class="front-join-row">
-                            <input type="text" id="front-join-room-input" class="front-join-input" placeholder="BARR-1234" maxlength="10">
+                            <input type="text" id="front-join-room-input" class="front-join-input" placeholder="FORT-1234" maxlength="10">
                             <button id="btn-front-join-room-action" class="btn-front-join-submit">Join</button>
                         </div>
                     </div>
@@ -301,11 +301,11 @@
                 <div id="tab-content-build-room" class="tab-content-panel">
                     <div class="sheet-form-label">ROOM CODE</div>
                     <div class="room-code-display-row">
-                        <span id="display-room-code" class="room-code-text">BARR-8291</span>
+                        <span id="display-room-code" class="room-code-text">FORT-8291</span>
                         <button id="btn-refresh-room-code" class="btn-copy-pill">New Code</button>
                     </div>
 
-                    <div class="sheet-form-label">GAME MODE</div>
+                    <div class="sheet-form-label">GAME TYPE</div>
                     <div class="sheet-mode-cards">
                         <div class="sheet-mode-box room-mode-box selected" data-mode="classic">
                             <svg viewBox="0 0 24 24"><path d="M19 22H5v-2h14v2zm-4-4H9v-2h6v2zm-1-4h-4V8h4v6zM12 2c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3z"/></svg>
@@ -324,6 +324,21 @@
                         </div>
                     </div>
 
+                    <div class="sheet-form-label">GAMEPLAY MODE</div>
+                    <div class="sheet-pills-row">
+                        <div class="sheet-choice-pill room-gameplay-pill" data-gameplay="normal">Normal (No Breaking)</div>
+                        <div class="sheet-choice-pill room-gameplay-pill selected" data-gameplay="breaking">💥 Barricade Breaking</div>
+                    </div>
+
+                    <div id="room-break-cost-section" class="break-cost-options-row">
+                        <div class="sheet-form-label">BREAKING COST</div>
+                        <div class="sheet-pills-row">
+                            <div class="sheet-choice-pill room-break-cost-pill" data-cost="3">3 Barricades</div>
+                            <div class="sheet-choice-pill room-break-cost-pill selected" data-cost="5">5 Barricades (Default)</div>
+                            <div class="sheet-choice-pill room-break-cost-pill" data-cost="7">7 Barricades</div>
+                        </div>
+                    </div>
+
                     <div class="sheet-form-label">TURN TIME</div>
                     <div class="sheet-pills-row">
                         <div class="sheet-choice-pill room-time-pill" data-sec="15">15s</div>
@@ -334,7 +349,7 @@
                         <div class="sheet-choice-pill room-time-pill" data-sec="180">3+0</div>
                     </div>
 
-                    <div class="sheet-form-label">BARRICADES</div>
+                    <div class="sheet-form-label">INITIAL BARRICADES</div>
                     <div class="sheet-pills-row">
                         <div class="sheet-choice-pill room-wall-pill" data-walls="5">Quick · 5</div>
                         <div class="sheet-choice-pill room-wall-pill" data-walls="7">Standard · 7</div>
@@ -360,7 +375,7 @@
                 <div id="tab-content-join-room" class="tab-content-panel" style="display: none;">
                     <div class="sheet-form-label">ENTER ROOM CODE</div>
                     <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                        <input type="text" id="join-room-input" class="sheet-text-input" placeholder="e.g. BARR-8291" maxlength="10">
+                        <input type="text" id="join-room-input" class="sheet-text-input" placeholder="e.g. FORT-8291" maxlength="10">
                         <button id="btn-join-room-action" class="btn-create-game-action" style="width: auto; padding: 0 20px; margin: 0;">Join</button>
                     </div>
 
@@ -379,7 +394,7 @@
                     <div class="matchmaking-pulse"></div>
                     <div class="matchmaking-avatar">🏠</div>
                 </div>
-                <h3 id="lobby-room-code-title" class="matchmaking-title">Room BARR-8291</h3>
+                <h3 id="lobby-room-code-title" class="matchmaking-title">Room FORT-8291</h3>
                 <p id="lobby-room-status" class="matchmaking-sub">Waiting for opponent to connect...</p>
                 <button id="btn-copy-live-link" class="btn-create-game-action" style="margin-bottom: 10px; font-size: 0.85rem; padding: 10px;">📋 Copy Invite Link</button>
                 <button id="btn-cancel-room-lobby" class="btn-cancel-search">Close Room</button>
@@ -466,6 +481,22 @@
                             <div class="sheet-mode-text-title">King of the Hill</div>
                             <div class="sheet-mode-text-sub">4 players · Race to center crown</div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- GAMEPLAY MODE (Normal vs Barricade Breaking) -->
+                <div class="sheet-form-label">GAMEPLAY MODE</div>
+                <div class="sheet-pills-row">
+                    <div class="sheet-choice-pill bot-gameplay-pill" data-gameplay="normal">Normal (No Breaking)</div>
+                    <div class="sheet-choice-pill bot-gameplay-pill selected" data-gameplay="breaking">💥 Barricade Breaking</div>
+                </div>
+
+                <div id="bot-break-cost-section" class="break-cost-options-row">
+                    <div class="sheet-form-label">BREAKING COST</div>
+                    <div class="sheet-pills-row">
+                        <div class="sheet-choice-pill bot-break-cost-pill" data-cost="3">3 Barricades</div>
+                        <div class="sheet-choice-pill bot-break-cost-pill selected" data-cost="5">5 Barricades (Default)</div>
+                        <div class="sheet-choice-pill bot-break-cost-pill" data-cost="7">7 Barricades</div>
                     </div>
                 </div>
 

@@ -1,59 +1,43 @@
-# Barricade Mobile Strategy Board Game
+# FORTIVEX — Competitive Online Multiplayer Strategy Board Game
 
-A faithful, mobile-first Web & PWA application reproducing the Barricade abstract strategy board game (`barricade.gg` / iOS & Android by *o7 Games*).
+A production-grade, mobile-first Web & PWA abstract strategy board game featuring real-time multiplayer, 4-tier AI engine, 4-Player King of the Hill center race, and tactical Barricade Breaking mechanics.
 
 ---
 
 ## 📱 Features & Highlights
 
-1. **Exact UI Parity with Barricade App:**
-   - **Side-by-Side Player Cards:** Clean design with active turn green border glow (`#22c55e`).
-   - **Mini Barricade Indicator:** Wall counts formatted with horizontal miniature bar icons (`▬ 10 /10`).
-   - **Sleek Move Banner:** Minimalist move bar displaying standard notation (e.g. `1. e2` or `28. h1`).
-   - **Theme & Sound Controls:** Working dark mode, light mode, and Web Audio procedural sound synthesizer.
+1. **Brand Identity:**
+   - Dark modern competitive design with amber-gold accents (`#f59e0b`) and emerald action buttons (`#22c55e`).
+   - Side-by-side player HUD with active turn glow, mini wall indicators (`▬ 10 /10`), and move notation banner (`1. e2`).
 
-2. **Clean Pure Tournament Rules (Zero Breaking Clutter):**
-   - Standard Quoridor / Barricade tournament rules: move pawn 1 square orthogonally or place a 2-space wall.
-   - Jump mechanics: Straight jump over opponent; diagonal jump if straight jump is blocked by a wall or board boundary.
-   - Real-time BFS pathfinding guarantees walls never trap either player.
-   - No unnecessary break barricade options or broken wall remnants.
+2. **Core Game Modes:**
+   - **Mode A: Normal Mode:** Pure competitive Quoridor tournament rules. Zero breaking clutter.
+   - **Mode B: Barricade Breaking Mode:** Spend barricades from your own inventory (cost 3, 5, or 7; default 5) to smash an opponent's placed barricade. Broken rubble allows pawns to pass through freely while permanently blocking any new wall placements.
+   - **Classic 2-Player Race:** P1 (Blue) vs P2 (Red) racing across the board.
+   - **King of the Hill (4 Players):** Blue, Red, Green, and Yellow pawns racing to claim the glowing center crown tile `(4, 4)`.
 
-3. **User Account & Unique Username System:**
-   - New players are automatically assigned a default handle (e.g. `user_098765`) with `1385 💎` Elo rating.
-   - Claim your unique, permanent display name (3-15 characters) via the Sign In modal.
-   - Name and stats persist automatically in `localStorage`.
+3. **Autonomous AI Engine (4 Difficulties):**
+   - **Easy (Tactical Novice):** Fast BFS shortest path advance with basic threat blocking.
+   - **Medium (Strategist):** Evaluates path differentials and bottleneck chokepoints.
+   - **Hard (Grandmaster Minimax):** Multi-ply Minimax search with counter-move evaluation and tactical wall breaks.
+   - **Impossible (Apex Engine):** Deep strategic search, corridor traps, jump priorities, and ruthless endgame calculation.
 
-4. **Ergonomic Touch Drag & Direct Tap on Phones:**
-   - **Default Move Mode:** Move Pawn mode is active by default without needing to touch any button.
-   - **50px Finger Offset:** During wall dragging, the floating wall is held 50px above your thumb so your finger never blocks the target groove.
-   - **Direct Tap-to-Place:** Tap Horizontal or Vertical, then tap any groove to snap and place immediately.
-   - **Haptic Vibration:** Tactile vibration on placement, jumps, and turns (`navigator.vibrate`).
-   - **Scroll Lock:** `touch-action: none` prevents mobile pull-to-refresh and rubber-banding.
+4. **Identity & Username Allocation:**
+   - Centralized sequential username generator starting at `noob10001`.
+   - Guest accounts, social login, and persistent ratings with +30 win / -30 loss standard ranked scoring.
 
-5. **Complete Game Modes:**
-   - **▶ Play Ranked Mode:** Features simulated matchmaking radar, opponent pairing (`anon-1646`), and live Elo rating changes (+16 on victory, -14 on defeat).
-   - **👥 Play with Friends:** Generates 4-digit room codes (`BARR-8291`) with link sharing and join code input.
-   - **🤖 vs Computer:** Multi-tier AI difficulties (**Novice**, **Tactician**, **Grandmaster**).
-   - **🧩 Daily Tactical Puzzles:** 5 tactical Quoridor/Barricade puzzles with completion tracking.
-   - **⚔️ Local 2-Player:** Pass & play on the same phone or tablet.
-   - **📺 Watch Live Matches:** Spectate grandmaster bot matches in real-time.
-   - **👑 King of the Hill Mode:** Center race mode with center crown tile on `(4, 4)`.
-
-6. **PWA Standalone & Offline Support:**
-   - `manifest.json` enables standalone installation to your phone's home screen.
-   - `sw.js` Service Worker provides instant offline gameplay.
+5. **Multiplayer & Custom Rooms:**
+   - Custom multiplayer rooms with instant 4-digit room codes (`FORT-XXXX`).
+   - Configurable turn clocks (15s, 20s, 30s, 45s, 1+0, 3+0), barricade counts (Quick 5, Standard 7, Chaos 9, Classic 10), and breaking cost options (3, 5, 7).
 
 ---
 
 ## 🚀 How to Launch and Play
 
 ### On Your Phone 📱
-Make sure your phone and PC are connected to the same Wi-Fi:
-- Open Safari (iOS) or Chrome (Android) on your phone:
-  👉 **`http://192.168.31.162:3000`**
-- Tap **Share > Add to Home Screen** on iPhone or **Install App** on Android to play in full-screen standalone mode.
+Connect to the same Wi-Fi network:
+👉 **`http://192.168.31.162:3000`**
 
 ### On Your PC 💻
-- Open in your browser:
-  👉 **`http://localhost:3000`**
-- Or double-click `start-game.bat`.
+👉 **`http://localhost:3000`**  
+Or run `start-game.bat`.
