@@ -8,14 +8,14 @@
     <meta name="theme-color" content="#121214">
     <title>FORTIVEX — Online Strategy Board Game</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=2.0.2">
+    <link rel="stylesheet" href="styles.css?v=2.2.0">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%23f59e0b'/><path d='M6 6h12v4H6zm0 8h12v4H6z' fill='%23121214'/></svg>">
     <script>
         // Force purge old legacy cache and reset old user_XXXX handles
         if ('caches' in window) {
             caches.keys().then(names => {
                 names.forEach(name => {
-                    if (name.includes('barricade') || !name.includes('v2.0.2')) caches.delete(name);
+                    if (name.includes('barricade') || !name.includes('v2.2.0')) caches.delete(name);
                 });
             });
         }
@@ -203,10 +203,10 @@
             <div class="home-top-bar">
                 <div class="home-logo-title">FORTIVEX</div>
                 <div class="home-user-badges">
-                    <div id="home-user-badge" class="home-badge" title="Click to Sign in / Choose Name" style="cursor: pointer;">
-                        <span class="badge-icon">💎</span>
-                        <span id="home-username-text">noob10001</span>
-                        <span id="home-elo-badge" class="home-elo-chip">1385</span>
+                    <div id="home-user-badge" class="home-badge" title="View Player Profile & Career Stats" style="cursor: pointer;">
+                        <span class="badge-icon" id="home-user-avatar">💎</span>
+                        <span id="home-username-text">noob10116</span>
+                        <span id="home-elo-badge" class="home-elo-chip">1200</span>
                     </div>
                     <button id="home-signin-prompt" class="btn-signin-pill" title="Claim your unique username">Sign in</button>
                     <div id="home-streak-badge-container" class="home-badge streak-badge" title="Your Personal Win Streak" style="cursor: pointer;">
@@ -326,6 +326,280 @@
                 <span class="stat-sep">·</span>
                 <div class="platform-stat-item">
                     <span id="stat-active-matches">0 Matches Active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             PROFILE & STATISTICS SCREEN VIEW (Dedicated Competitive Page)
+             ======================================================== -->
+        <div id="profile-screen-view" class="profile-screen-view" style="display: none;">
+            <!-- Top Nav -->
+            <div class="profile-top-bar">
+                <button id="btn-profile-back" class="btn-back-arrow" title="Back to Lobby">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                    </svg>
+                </button>
+                <div class="profile-top-title">PLAYER PROFILE</div>
+                <button id="btn-open-edit-profile" class="btn-profile-edit-pill">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px;">
+                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                    Edit
+                </button>
+            </div>
+
+            <div class="profile-scroll-content">
+                <!-- Profile Header Card -->
+                <div class="profile-hero-card">
+                    <div class="profile-hero-main">
+                        <div class="profile-avatar-container">
+                            <div id="profile-avatar-display" class="profile-avatar-circle">💎</div>
+                            <div class="profile-status-online-dot" title="Online"></div>
+                        </div>
+                        <div class="profile-identity-col">
+                            <div class="profile-name-row">
+                                <h2 id="profile-display-name" class="profile-username">noob10116</h2>
+                                <span id="profile-tier-badge" class="profile-rank-tier tier-silver">🥈 Silver</span>
+                            </div>
+                            <div id="profile-player-id" class="profile-player-id">ID: usr_10116_m0cvq4</div>
+                            <div class="profile-badges-row">
+                                <span id="profile-rating-badge" class="profile-badge-pill rating-pill">⭐ 1200 ELO</span>
+                                <span id="profile-account-type-badge" class="profile-badge-pill account-pill">👤 Guest</span>
+                                <span id="profile-member-since" class="profile-badge-pill member-pill">📅 Nov 2026</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Guest Account Linking CTA Banner -->
+                    <div id="profile-guest-link-banner" class="profile-guest-banner">
+                        <div class="guest-banner-text">
+                            <strong>Protect your rating & stats!</strong> Link Google or Facebook to sync across devices.
+                        </div>
+                        <button id="btn-profile-banner-link" class="btn-guest-banner-action">Link Account</button>
+                    </div>
+                </div>
+
+                <!-- 5 Profile Tabs -->
+                <div class="profile-nav-tabs">
+                    <button class="profile-tab-item active" data-tab="overview">Overview</button>
+                    <button class="profile-tab-item" data-tab="stats">Statistics</button>
+                    <button class="profile-tab-item" data-tab="rating">Rating</button>
+                    <button class="profile-tab-item" data-tab="matches">Matches</button>
+                    <button class="profile-tab-item" data-tab="achievements">Badges</button>
+                </div>
+
+                <!-- Tab 1: Overview -->
+                <div id="profile-view-overview" class="profile-tab-view active">
+                    <!-- Key Highlight Cards -->
+                    <div class="profile-overview-grid">
+                        <div class="overview-metric-card">
+                            <div class="metric-icon">🏆</div>
+                            <div class="metric-val" id="ov-peak-rating">1200</div>
+                            <div class="metric-label">Peak Rating</div>
+                        </div>
+                        <div class="overview-metric-card">
+                            <div class="metric-icon">🔥</div>
+                            <div class="metric-val" id="ov-curr-streak">0</div>
+                            <div class="metric-label">Win Streak</div>
+                        </div>
+                        <div class="overview-metric-card">
+                            <div class="metric-icon">🎯</div>
+                            <div class="metric-val" id="ov-win-rate">0%</div>
+                            <div class="metric-label">Win Rate</div>
+                        </div>
+                        <div class="overview-metric-card">
+                            <div class="metric-icon">⚔️</div>
+                            <div class="metric-val" id="ov-total-games">0</div>
+                            <div class="metric-label">Matches</div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Form / Mini Matches -->
+                    <div class="profile-section-card">
+                        <div class="profile-card-header">
+                            <span>RECENT MATCHES</span>
+                            <button class="btn-text-action" id="btn-see-all-matches">See All →</button>
+                        </div>
+                        <div id="profile-mini-matches-list" class="profile-mini-list">
+                            <div class="profile-empty-state">No completed matches yet. Jump into Ranked to build your record!</div>
+                        </div>
+                    </div>
+
+                    <!-- Achievements Spotlight -->
+                    <div class="profile-section-card">
+                        <div class="profile-card-header">
+                            <span>TOP ACHIEVEMENTS</span>
+                            <button class="btn-text-action" id="btn-see-all-achievements">View All (11) →</button>
+                        </div>
+                        <div id="profile-mini-achievements-list" class="profile-mini-achievements-row">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Statistics (10 Main + 9 Additional) -->
+                <div id="profile-view-stats" class="profile-tab-view">
+                    <div class="profile-stats-group-label">MAIN CAREER METRICS</div>
+                    <div class="profile-stats-grid-10">
+                        <div class="stat-box">
+                            <div class="stat-number" id="stat-total-games">0</div>
+                            <div class="stat-title">Total Games</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-win" id="stat-total-wins">0</div>
+                            <div class="stat-title">Total Wins</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-loss" id="stat-total-losses">0</div>
+                            <div class="stat-title">Total Losses</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-draw" id="stat-draws">0</div>
+                            <div class="stat-title">Draws</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-rate" id="stat-win-rate">0%</div>
+                            <div class="stat-title">Win Rate</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-gold" id="stat-current-rating">1200</div>
+                            <div class="stat-title">Current Rating</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-gold" id="stat-peak-rating">1200</div>
+                            <div class="stat-title">Best Rating</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-streak" id="stat-curr-streak">0</div>
+                            <div class="stat-title">Current Streak</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-streak" id="stat-best-streak">0</div>
+                            <div class="stat-title">Best Streak</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-loss" id="stat-losing-streak">0</div>
+                            <div class="stat-title">Losing Streak</div>
+                        </div>
+                    </div>
+
+                    <div class="profile-stats-group-label" style="margin-top: 18px;">ADDITIONAL COMPETITIVE STATS</div>
+                    <div class="profile-additional-stats-card">
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">Ranked Matches Played</span>
+                            <span class="stat-row-value" id="stat-ranked-played">0</span>
+                        </div>
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">Casual Matches Played</span>
+                            <span class="stat-row-value" id="stat-casual-played">0</span>
+                        </div>
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">Human Opponents Defeated</span>
+                            <span class="stat-row-value stat-win" id="stat-human-defeated">0</span>
+                        </div>
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">AI Opponents Defeated</span>
+                            <span class="stat-row-value stat-win" id="stat-ai-defeated">0</span>
+                        </div>
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">Average Match Duration</span>
+                            <span class="stat-row-value" id="stat-avg-duration">0s</span>
+                        </div>
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">Total Playing Time</span>
+                            <span class="stat-row-value" id="stat-total-playtime">0m</span>
+                        </div>
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">Daily Games Played (Today)</span>
+                            <span class="stat-row-value" id="stat-daily-games">0</span>
+                        </div>
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">Daily Wins (Today)</span>
+                            <span class="stat-row-value stat-win" id="stat-daily-wins">0</span>
+                        </div>
+                        <div class="stat-row-item">
+                            <span class="stat-row-label">Daily Losses (Today)</span>
+                            <span class="stat-row-value stat-loss" id="stat-daily-losses">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Rating Progression History -->
+                <div id="profile-view-rating" class="profile-tab-view">
+                    <!-- Period Filter Pills -->
+                    <div class="rating-filter-bar">
+                        <button class="rating-period-pill active" data-period="all">All Time</button>
+                        <button class="rating-period-pill" data-period="30d">Last 30 Days</button>
+                        <button class="rating-period-pill" data-period="7d">Last 7 Days</button>
+                    </div>
+
+                    <!-- Summary Chips -->
+                    <div class="rating-summary-strip">
+                        <div class="rating-strip-item">
+                            <div class="strip-label">CURRENT</div>
+                            <div class="strip-val" id="chart-curr-rating">1200</div>
+                        </div>
+                        <div class="rating-strip-item">
+                            <div class="strip-label">PEAK</div>
+                            <div class="strip-val" id="chart-peak-rating">1200</div>
+                        </div>
+                        <div class="rating-strip-item">
+                            <div class="strip-label">START</div>
+                            <div class="strip-val" id="chart-start-rating">1200</div>
+                        </div>
+                        <div class="rating-strip-item">
+                            <div class="strip-label">NET CHANGE</div>
+                            <div class="strip-val" id="chart-net-change">+0</div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive SVG Chart -->
+                    <div class="chart-canvas-container">
+                        <svg id="rating-history-svg" class="rating-history-svg" viewBox="0 0 380 180" preserveAspectRatio="none">
+                            <!-- Injected by UI chart renderer -->
+                        </svg>
+                        <div id="chart-tooltip" class="chart-tooltip" style="display: none;"></div>
+                    </div>
+
+                    <!-- Rating Transaction Log -->
+                    <div class="profile-stats-group-label" style="margin-top: 14px;">TRANSACTION LOG (+30 / -30)</div>
+                    <div id="rating-transactions-list" class="rating-transactions-list">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Tab 4: Match History (Paginated) -->
+                <div id="profile-view-matches" class="profile-tab-view">
+                    <!-- Filter Pills -->
+                    <div class="match-history-filter-bar">
+                        <button class="match-history-pill active" data-filter="all">All</button>
+                        <button class="match-history-pill" data-filter="ranked">Ranked</button>
+                        <button class="match-history-pill" data-filter="casual">Casual</button>
+                    </div>
+
+                    <div id="profile-matches-container" class="profile-matches-container">
+                        <!-- Match Cards -->
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="profile-pagination-bar">
+                        <button id="btn-matches-prev" class="btn-pagination-pill" disabled>← Previous</button>
+                        <span id="matches-page-label" class="pagination-page-info">Page 1 of 1</span>
+                        <button id="btn-matches-next" class="btn-pagination-pill" disabled>Next →</button>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Achievements (11 Complete Badges) -->
+                <div id="profile-view-achievements" class="profile-tab-view">
+                    <div class="achievements-summary-header">
+                        <span id="achievements-unlocked-count">0 of 11 Unlocked</span>
+                        <span class="achievements-note">Verified from live records</span>
+                    </div>
+                    <div id="profile-achievements-container" class="profile-achievements-container">
+                        <!-- Populated dynamically -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -604,28 +878,120 @@
         </div>
 
         <!-- ========================================================
-             5. SIGN IN / CHOOSE USERNAME BOTTOM SHEET
+             5. AUTHENTICATION BOTTOM SHEET (Google / Facebook / Link Guest)
              ======================================================== -->
         <div id="signin-sheet" class="modal-bottom-sheet-overlay">
             <div class="sheet-container-card">
                 <div class="sheet-handle-bar"></div>
 
                 <div class="sheet-header-title">
-                    <span>Sign In & Choose Name</span>
+                    <span>Sign In to FORTIVEX</span>
                     <button class="sheet-close-x close-modal-trigger">&times;</button>
                 </div>
 
-                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
-                    New players are assigned a default handle like <code style="color:var(--amber-gold);">noob10001</code>. Sign in to choose your permanent, unique display name for online and ranked matches!
-                </p>
-
-                <div style="margin-bottom: 16px;">
-                    <label class="sheet-form-label">CHOOSE UNIQUE USERNAME</label>
-                    <input type="text" id="signin-username-input" class="sheet-text-input" placeholder="e.g. waytogo" maxlength="15" autocomplete="off">
-                    <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 5px;">3-15 letters, numbers, or underscores. Must be unique.</div>
+                <div class="auth-modal-subtext">
+                    Sign in to preserve your rating, win streak, achievements and stats across all your devices.
                 </div>
 
-                <button id="btn-submit-signin" class="btn-create-game-action">Claim Username & Sign In</button>
+                <!-- Social Authentication Buttons -->
+                <div class="auth-social-buttons">
+                    <button id="btn-auth-google" class="btn-social-auth btn-google">
+                        <svg class="social-icon" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                        </svg>
+                        <span>Continue with Google</span>
+                    </button>
+
+                    <button id="btn-auth-facebook" class="btn-social-auth btn-facebook">
+                        <svg class="social-icon" viewBox="0 0 24 24" fill="#1877F2">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                        <span>Continue with Facebook</span>
+                    </button>
+                </div>
+
+                <div class="auth-divider">
+                    <span>OR CLAIM CUSTOM GAMER TAG</span>
+                </div>
+
+                <!-- Link Guest / Custom Gamer Tag Section -->
+                <div class="auth-guest-info-box">
+                    <div class="auth-info-row">
+                        <span class="auth-info-label">Active Guest ID:</span>
+                        <span id="auth-current-user-id" class="auth-info-val">usr_10116_m0cvq4</span>
+                    </div>
+                    <div class="auth-info-row">
+                        <span class="auth-info-label">Current Handle:</span>
+                        <span id="auth-current-username" class="auth-info-val highlight">noob10116</span>
+                    </div>
+                </div>
+
+                <div class="auth-custom-name-wrap">
+                    <label class="sheet-form-label">CHOOSE UNIQUE GAMER TAG</label>
+                    <div class="auth-input-group">
+                        <input type="text" id="signin-username-input" class="sheet-text-input" placeholder="e.g. ShadowTactician" maxlength="15" autocomplete="off">
+                        <button id="btn-submit-signin" class="btn-claim-name">Claim Tag</button>
+                    </div>
+                    <div id="signin-error-msg" class="auth-error-hint">3-15 alphanumeric characters. Letters, numbers, and underscores only.</div>
+                </div>
+
+                <div class="auth-guarantee-note">
+                    🔒 <strong>Progress Guaranteed:</strong> Your rating, streaks, and match records remain 100% attached to your permanent account.
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             5b. EDIT PROFILE BOTTOM SHEET
+             ======================================================== -->
+        <div id="edit-profile-sheet" class="modal-bottom-sheet-overlay">
+            <div class="sheet-container-card">
+                <div class="sheet-handle-bar"></div>
+
+                <div class="sheet-header-title">
+                    <span>Edit Profile</span>
+                    <button class="sheet-close-x close-modal-trigger">&times;</button>
+                </div>
+
+                <!-- 1. Choose Avatar -->
+                <div class="edit-profile-section">
+                    <div class="sheet-form-label">CHOOSE AVATAR</div>
+                    <div class="avatar-selection-grid">
+                        <div class="avatar-choice-pill selected" data-avatar="💎">💎</div>
+                        <div class="avatar-choice-pill" data-avatar="👑">👑</div>
+                        <div class="avatar-choice-pill" data-avatar="⚡">⚡</div>
+                        <div class="avatar-choice-pill" data-avatar="🛡️">🛡️</div>
+                        <div class="avatar-choice-pill" data-avatar="⚔️">⚔️</div>
+                        <div class="avatar-choice-pill" data-avatar="🎯">🎯</div>
+                        <div class="avatar-choice-pill" data-avatar="🦁">🦁</div>
+                        <div class="avatar-choice-pill" data-avatar="🐺">🐺</div>
+                        <div class="avatar-choice-pill" data-avatar="🐲">🐲</div>
+                        <div class="avatar-choice-pill" data-avatar="🚀">🚀</div>
+                        <div class="avatar-choice-pill" data-avatar="🕹️">🕹️</div>
+                        <div class="avatar-choice-pill" data-avatar="🌟">🌟</div>
+                    </div>
+                </div>
+
+                <!-- 2. Display Name -->
+                <div class="edit-profile-section" style="margin-top: 14px;">
+                    <div class="sheet-form-label">DISPLAY NAME (GAMER TAG)</div>
+                    <input type="text" id="edit-profile-displayname-input" class="sheet-text-input" placeholder="Enter display name" maxlength="15">
+                    <div id="edit-profile-name-hint" class="auth-error-hint">3-15 characters. Changing your display name preserves your permanent ID.</div>
+                </div>
+
+                <!-- 3. Account Link / Status -->
+                <div class="edit-profile-section" style="margin-top: 14px;">
+                    <div class="sheet-form-label">ACCOUNT STATUS</div>
+                    <div class="edit-account-status-row">
+                        <span id="edit-account-status-label" class="edit-status-text">Guest Account (Not Linked)</span>
+                        <button id="btn-edit-open-link" class="btn-link-action-small">Link</button>
+                    </div>
+                </div>
+
+                <button id="btn-save-profile-changes" class="btn-create-game-action" style="margin-top: 18px;">Save Profile Changes</button>
             </div>
         </div>
 
@@ -807,9 +1173,9 @@
     </div>
 
     <!-- Scripts with Cache-Busting -->
-    <script src="audio.js?v=2.0.2"></script>
-    <script src="game.js?v=2.0.2"></script>
-    <script src="ai.js?v=2.0.2"></script>
-    <script src="ui.js?v=2.0.2"></script>
+    <script src="audio.js?v=2.2.0"></script>
+    <script src="game.js?v=2.2.0"></script>
+    <script src="ai.js?v=2.2.0"></script>
+    <script src="ui.js?v=2.2.0"></script>
 </body>
 </html>

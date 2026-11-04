@@ -1,5 +1,396 @@
 [
   {
+    "id": "match_1793811096444_xhppno",
+    "timestamp": 1793811096444,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10116_m0cvq4",
+        "username": "noob10116",
+        "role": 1,
+        "rating": 1170,
+        "eloDelta": -30,
+        "isWinner": false
+      },
+      {
+        "userId": null,
+        "username": "Opponent",
+        "role": 2,
+        "rating": 1200,
+        "eloDelta": 30,
+        "isBot": true
+      }
+    ],
+    "winner": 2,
+    "winReason": "Defeat",
+    "moveCount": 0,
+    "durationSec": 45
+  },
+  {
+    "id": "match_1793809600870_5wl8ij",
+    "timestamp": 1793809600870,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10134_ekaqww",
+        "username": "Vex_8142",
+        "role": 1,
+        "rating": 1200,
+        "eloDelta": -30,
+        "isWinner": false
+      },
+      {
+        "userId": null,
+        "username": "noob10080",
+        "role": 2,
+        "rating": 1950,
+        "eloDelta": 30,
+        "isBot": true
+      }
+    ],
+    "winner": 2,
+    "winReason": "Defeat",
+    "moveCount": 0,
+    "durationSec": 85
+  },
+  {
+    "id": "match_1793809600852_7uwp98",
+    "timestamp": 1793809600852,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10134_ekaqww",
+        "username": "Vex_8142",
+        "role": 1,
+        "rating": 1230,
+        "eloDelta": 30,
+        "isWinner": true
+      },
+      {
+        "userId": null,
+        "username": "noob10050",
+        "role": 2,
+        "rating": 1560,
+        "eloDelta": -30,
+        "isBot": true
+      }
+    ],
+    "winner": 1,
+    "winReason": "Victory",
+    "moveCount": 18,
+    "durationSec": 120
+  },
+  {
+    "id": "match_1793809600719_1k4n0u",
+    "timestamp": 1793809600719,
+    "roomCode": "FORT-TEST",
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "role": 1,
+        "username": "PlayerOne",
+        "userId": "usr_10131_0t8e8k"
+      },
+      {
+        "role": 2,
+        "username": "PlayerTwo",
+        "userId": "usr_10132_pf9ryy"
+      }
+    ],
+    "winner": 1,
+    "winReason": "Reached goal line",
+    "moveCount": 24,
+    "durationSec": 140
+  },
+  {
+    "id": "match_1793809600713_o98l0t",
+    "timestamp": 1793809600713,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10133_0f3f7p",
+        "username": "noob10133",
+        "role": 1,
+        "rating": 1200,
+        "eloDelta": -30,
+        "isWinner": false
+      },
+      {
+        "userId": null,
+        "username": "Bot",
+        "role": 2,
+        "rating": 1200,
+        "eloDelta": 30,
+        "isBot": true
+      }
+    ],
+    "winner": 2,
+    "winReason": "Defeat",
+    "moveCount": 0,
+    "durationSec": 60
+  },
+  {
+    "id": "match_1793809600703_9fxtt1",
+    "timestamp": 1793809600703,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10133_0f3f7p",
+        "username": "noob10133",
+        "role": 1,
+        "rating": 1230,
+        "eloDelta": 30,
+        "isWinner": true
+      },
+      {
+        "userId": null,
+        "username": "Bot",
+        "role": 2,
+        "rating": 1200,
+        "eloDelta": -30,
+        "isBot": true
+      }
+    ],
+    "winner": 1,
+    "winReason": "Victory",
+    "moveCount": 0,
+    "durationSec": 60
+  },
+  {
+    "id": "match_1793809600682_ad1o9k",
+    "timestamp": 1793809600682,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10131_0t8e8k",
+        "username": "Apex_21569",
+        "role": 1,
+        "rating": 1230,
+        "eloDelta": 30,
+        "isWinner": true
+      },
+      {
+        "userId": null,
+        "username": "Bot",
+        "role": 2,
+        "rating": 1200,
+        "eloDelta": -30,
+        "isBot": true
+      }
+    ],
+    "winner": 1,
+    "winReason": "Victory",
+    "moveCount": 0,
+    "durationSec": 60
+  },
+  {
+    "id": "match_1793809521559_e7xn1y",
+    "timestamp": 1793809521559,
+    "roomCode": "FORT-TEST",
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "role": 1,
+        "username": "PlayerOne",
+        "userId": "usr_10127_kbivxr"
+      },
+      {
+        "role": 2,
+        "username": "PlayerTwo",
+        "userId": "usr_10128_wo2hku"
+      }
+    ],
+    "winner": 1,
+    "winReason": "Reached goal line",
+    "moveCount": 24,
+    "durationSec": 140
+  },
+  {
+    "id": "match_1793809521553_48a1f3",
+    "timestamp": 1793809521553,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10129_z4am2r",
+        "username": "noob10129",
+        "role": 1,
+        "rating": 1200,
+        "eloDelta": -30,
+        "isWinner": false
+      },
+      {
+        "userId": null,
+        "username": "Bot",
+        "role": 2,
+        "rating": 1200,
+        "eloDelta": 30,
+        "isBot": true
+      }
+    ],
+    "winner": 2,
+    "winReason": "Defeat",
+    "moveCount": 0,
+    "durationSec": 60
+  },
+  {
+    "id": "match_1793809521545_rea2zn",
+    "timestamp": 1793809521545,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10129_z4am2r",
+        "username": "noob10129",
+        "role": 1,
+        "rating": 1230,
+        "eloDelta": 30,
+        "isWinner": true
+      },
+      {
+        "userId": null,
+        "username": "Bot",
+        "role": 2,
+        "rating": 1200,
+        "eloDelta": -30,
+        "isBot": true
+      }
+    ],
+    "winner": 1,
+    "winReason": "Victory",
+    "moveCount": 0,
+    "durationSec": 60
+  },
+  {
+    "id": "match_1793809521525_mggb9p",
+    "timestamp": 1793809521525,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10127_kbivxr",
+        "username": "Apex_83235",
+        "role": 1,
+        "rating": 1230,
+        "eloDelta": 30,
+        "isWinner": true
+      },
+      {
+        "userId": null,
+        "username": "Bot",
+        "role": 2,
+        "rating": 1200,
+        "eloDelta": -30,
+        "isBot": true
+      }
+    ],
+    "winner": 1,
+    "winReason": "Victory",
+    "moveCount": 0,
+    "durationSec": 60
+  },
+  {
+    "id": "match_1793809497423_22h35g",
+    "timestamp": 1793809497423,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10126_v04758",
+        "username": "GrandMaster_Vex",
+        "role": 1,
+        "rating": 1200,
+        "eloDelta": -30,
+        "isWinner": false
+      },
+      {
+        "userId": null,
+        "username": "noob10080",
+        "role": 2,
+        "rating": 1950,
+        "eloDelta": 30,
+        "isBot": true
+      }
+    ],
+    "winner": 2,
+    "winReason": "Defeat",
+    "moveCount": 0,
+    "durationSec": 85
+  },
+  {
+    "id": "match_1793809497408_mi8qxs",
+    "timestamp": 1793809497408,
+    "roomCode": null,
+    "mode": "classic",
+    "gameplayMode": "breaking",
+    "breakCost": 5,
+    "isRanked": true,
+    "players": [
+      {
+        "userId": "usr_10126_v04758",
+        "username": "GrandMaster_Vex",
+        "role": 1,
+        "rating": 1230,
+        "eloDelta": 30,
+        "isWinner": true
+      },
+      {
+        "userId": null,
+        "username": "noob10050",
+        "role": 2,
+        "rating": 1560,
+        "eloDelta": -30,
+        "isBot": true
+      }
+    ],
+    "winner": 1,
+    "winReason": "Victory",
+    "moveCount": 18,
+    "durationSec": 120
+  },
+  {
     "id": "match_1793807442071_jnsjaz",
     "timestamp": 1793807442071,
     "roomCode": "FORT-TEST",

@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/engine.test.js && node tests/backend.test.js && node tests/ai_benchmark.test.js"
+    "test": "node tests/engine.test.js && node tests/backend.test.js && node tests/ai_benchmark.test.js && node tests/profile.test.js"
   },
   "keywords": [
     "strategy",

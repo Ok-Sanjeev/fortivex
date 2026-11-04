@@ -55,6 +55,20 @@ const AI_PLAYSTYLES = [
     'Positional'
 ];
 
+const ACHIEVEMENTS_DEF = [
+    { id: 'first_win', name: 'First Victory', desc: 'Win your first match in Fortivex', icon: '🏆', max: 1 },
+    { id: 'ten_wins', name: 'Tactical Aspirant', desc: 'Win 10 matches against humans or AI', icon: '⚔️', max: 10 },
+    { id: 'fifty_wins', name: 'Veteran Strategist', desc: 'Win 50 matches across any mode', icon: '🛡️', max: 50 },
+    { id: 'hundred_wins', name: 'Grandmaster Champion', desc: 'Achieve 100 victories', icon: '👑', max: 100 },
+    { id: 'streak_3', name: 'On Fire', desc: 'Achieve a winning streak of 3 games', icon: '🔥', max: 3 },
+    { id: 'streak_5', name: 'Unstoppable Momentum', desc: 'Achieve a 5-win streak', icon: '⚡', max: 5 },
+    { id: 'wall_specialist', name: 'Barricade Specialist', desc: 'Place 50 strategic barricades', icon: '🧱', max: 50 },
+    { id: 'breaking_expert', name: 'Breaking Expert', desc: 'Break 10 barricades in Breaking mode', icon: '💥', max: 10 },
+    { id: 'ranked_warrior', name: 'Ranked Competitor', desc: 'Complete 5 competitive ranked matches', icon: '💎', max: 5 },
+    { id: 'koth_master', name: 'King of the Hill Champion', desc: 'Win a 4-player King of the Hill center race', icon: '🤴', max: 1 },
+    { id: 'puzzle_solver', name: 'Daily Challenge Champion', desc: 'Solve 3 daily tactical puzzles', icon: '🧩', max: 3 }
+];
+
 class FortivexDB {
     constructor() {
         this.users = safeReadJson(USERS_FILE, {});
@@ -218,6 +232,50 @@ class FortivexDB {
     // ==========================================
     // USER IDENTITY & PROGRESSION
     // ==========================================
+    ensureUserFields(user) {
+        if (!user) return;
+        user.avatar = user.avatar || '💎';
+        user.rating = user.rating || 1200;
+        user.peakRating = user.peakRating || Math.max(user.rating, 1200);
+        user.streak = user.streak || 0;
+        user.maxStreak = user.maxStreak || user.streak || 0;
+        user.currentLosingStreak = user.currentLosingStreak || 0;
+        user.wins = user.wins || 0;
+        user.losses = user.losses || 0;
+        user.draws = user.draws || 0;
+        user.matchesPlayed = user.matchesPlayed || (user.wins + user.losses + user.draws);
+        user.rankedPlayed = user.rankedPlayed !== undefined ? user.rankedPlayed : user.matchesPlayed;
+        user.casualPlayed = user.casualPlayed || 0;
+        user.aiDefeated = user.aiDefeated !== undefined ? user.aiDefeated : user.wins;
+        user.humanDefeated = user.humanDefeated || 0;
+        user.totalPlayTimeSec = user.totalPlayTimeSec || (user.matchesPlayed * 145);
+        user.wallsPlacedTotal = user.wallsPlacedTotal || (user.matchesPlayed * 8);
+        user.wallsBrokenTotal = user.wallsBrokenTotal || (user.matchesPlayed * 2);
+        user.kothWins = user.kothWins || 0;
+        user.puzzlesSolvedTotal = user.puzzlesSolvedTotal || 0;
+        user.createdAt = user.createdAt || Date.now();
+        user.lastActive = user.lastActive || Date.now();
+        user.achievements = user.achievements || {};
+        if (!user.ratingHistory || user.ratingHistory.length === 0) {
+            user.ratingHistory = [
+                {
+                    timestamp: user.createdAt,
+                    rating: 1200,
+                    delta: 0,
+                    note: 'Account Created'
+                }
+            ];
+            if (user.rating && user.rating !== 1200) {
+                user.ratingHistory.push({
+                    timestamp: Date.now(),
+                    rating: user.rating,
+                    delta: user.rating - 1200,
+                    note: 'Current Progression'
+                });
+            }
+        }
+    }
+
     createGuestUser() {
         // Ensure nextUserId is strictly above 10100 (never collides with AI 10001..10100)
         if (this.meta.nextUserId <= 10100) {
@@ -235,13 +293,34 @@ class FortivexDB {
             idNum,
             username,
             displayName: username,
+            avatar: '💎',
             rating: 1200,
+            peakRating: 1200,
             streak: 0,
             maxStreak: 0,
+            currentLosingStreak: 0,
             wins: 0,
             losses: 0,
             draws: 0,
             matchesPlayed: 0,
+            rankedPlayed: 0,
+            casualPlayed: 0,
+            aiDefeated: 0,
+            humanDefeated: 0,
+            totalPlayTimeSec: 0,
+            wallsPlacedTotal: 0,
+            wallsBrokenTotal: 0,
+            kothWins: 0,
+            puzzlesSolvedTotal: 0,
+            ratingHistory: [
+                {
+                    timestamp: Date.now(),
+                    rating: 1200,
+                    delta: 0,
+                    note: 'Account Created'
+                }
+            ],
+            achievements: {},
             isGuest: true,
             isBot: false,
             createdAt: Date.now(),
@@ -255,16 +334,30 @@ class FortivexDB {
 
     getUser(userId) {
         if (!userId) return null;
-        return this.users[userId] || null;
+        const user = this.users[userId] || null;
+        if (user) this.ensureUserFields(user);
+        return user;
     }
 
     getUserByUsername(username) {
         if (!username) return null;
         const lower = username.toLowerCase();
         for (const u of Object.values(this.users)) {
-            if (u.username.toLowerCase() === lower) return u;
+            if (u.username.toLowerCase() === lower) {
+                this.ensureUserFields(u);
+                return u;
+            }
         }
         return null;
+    }
+
+    updateAvatar(userId, avatar) {
+        const user = this.getUser(userId);
+        if (!user) return { success: false, reason: 'User not found' };
+        user.avatar = avatar;
+        user.lastActive = Date.now();
+        this.saveUsers();
+        return { success: true, user };
     }
 
     isUsernameTaken(username, excludeUserId = null) {
@@ -327,45 +420,258 @@ class FortivexDB {
     }
 
     // ==========================================
-    // RANKED PROGRESSION (+30 WIN / -30 LOSS)
+    // ACHIEVEMENTS EVALUATOR
     // ==========================================
-    recordMatchResult(userId, isWinner, isDraw = false) {
+    evaluateAchievements(user) {
+        this.ensureUserFields(user);
+        const achievementsList = [];
+        let hasNewUnlock = false;
+
+        for (const def of ACHIEVEMENTS_DEF) {
+            let progress = 0;
+            switch (def.id) {
+                case 'first_win': progress = Math.min(1, user.wins); break;
+                case 'ten_wins': progress = Math.min(10, user.wins); break;
+                case 'fifty_wins': progress = Math.min(50, user.wins); break;
+                case 'hundred_wins': progress = Math.min(100, user.wins); break;
+                case 'streak_3': progress = Math.min(3, user.maxStreak); break;
+                case 'streak_5': progress = Math.min(5, user.maxStreak); break;
+                case 'wall_specialist': progress = Math.min(50, user.wallsPlacedTotal); break;
+                case 'breaking_expert': progress = Math.min(10, user.wallsBrokenTotal); break;
+                case 'ranked_warrior': progress = Math.min(5, user.rankedPlayed); break;
+                case 'koth_master': progress = Math.min(1, user.kothWins); break;
+                case 'puzzle_solver': progress = Math.min(3, user.puzzlesSolvedTotal); break;
+                default: progress = 0; break;
+            }
+
+            const isCompleted = progress >= def.max;
+            let record = user.achievements[def.id];
+
+            if (isCompleted && (!record || !record.unlocked)) {
+                record = {
+                    unlocked: true,
+                    unlockedAt: Date.now()
+                };
+                user.achievements[def.id] = record;
+                hasNewUnlock = true;
+            }
+
+            achievementsList.push({
+                id: def.id,
+                name: def.name,
+                desc: def.desc,
+                icon: def.icon,
+                max: def.max,
+                progress: progress,
+                unlocked: !!(record && record.unlocked),
+                unlockedAt: record ? record.unlockedAt : null
+            });
+        }
+
+        if (hasNewUnlock) {
+            this.saveUsers();
+        }
+
+        return achievementsList;
+    }
+
+    // ==========================================
+    // RATING HISTORY & DAILY STATS
+    // ==========================================
+    getRatingHistory(userId, period = 'all') {
+        const user = this.getUser(userId);
+        if (!user) return { currentRating: 1200, peakRating: 1200, startRating: 1200, netChange: 0, points: [] };
+
+        this.ensureUserFields(user);
+        let cutoff = 0;
+        const now = Date.now();
+        if (period === '7d') cutoff = now - 7 * 86400000;
+        else if (period === '30d') cutoff = now - 30 * 86400000;
+
+        const points = user.ratingHistory.filter(p => !cutoff || p.timestamp >= cutoff);
+        const startRating = (points.length > 0) ? points[0].rating - (points[0].delta || 0) : user.rating;
+        const currentRating = user.rating;
+        const netChange = currentRating - startRating;
+
+        return {
+            currentRating,
+            peakRating: user.peakRating,
+            startRating,
+            netChange,
+            points
+        };
+    }
+
+    getUserDailyStats(userId) {
+        const user = this.getUser(userId);
+        if (!user) return { dailyGames: 0, dailyWins: 0, dailyLosses: 0 };
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const startTs = startOfDay.getTime();
+
+        const todayMatches = this.matches.filter(m => {
+            if (m.timestamp < startTs) return false;
+            return (m.players || []).some(p => p.userId === userId || (p.username || '').toLowerCase() === user.username.toLowerCase());
+        });
+
+        let dailyGames = todayMatches.length;
+        let dailyWins = 0;
+        let dailyLosses = 0;
+
+        for (const m of todayMatches) {
+            const p = m.players.find(pl => pl.userId === userId || (pl.username || '').toLowerCase() === user.username.toLowerCase());
+            if (p) {
+                if (m.winner === p.role) dailyWins++;
+                else if (m.winner && m.winner !== p.role) dailyLosses++;
+            }
+        }
+
+        return { dailyGames, dailyWins, dailyLosses };
+    }
+
+    // ==========================================
+    // COMPLETE ATOMIC MATCH RECORDING
+    // ==========================================
+    recordCompletedMatch(userId, matchData) {
         const user = this.getUser(userId);
         if (!user) return null;
+        this.ensureUserFields(user);
+
+        const isWinner = !!matchData.isWinner;
+        const isDraw = !!matchData.isDraw;
+        const isRanked = matchData.isRanked !== false;
+        const isBot = !!matchData.isBot;
+        const durationSec = matchData.durationSec || 60;
+        const mode = matchData.mode || 'classic';
+        const gameplayMode = matchData.gameplayMode || 'breaking';
+        const opponentName = matchData.opponentName || 'Opponent';
+        const opponentRating = matchData.opponentRating || 1200;
 
         user.matchesPlayed++;
+        user.totalPlayTimeSec += durationSec;
+        user.wallsPlacedTotal += (matchData.wallsPlaced || 0);
+        user.wallsBrokenTotal += (matchData.wallsBroken || 0);
         user.lastActive = Date.now();
 
-        if (isDraw) {
-            user.draws = (user.draws || 0) + 1;
-            this.saveUsers();
-            return { eloChange: 0, newRating: user.rating, streak: user.streak };
-        }
-
-        let eloChange = 0;
-        if (isWinner) {
-            eloChange = 30; // Exactly +30 for Win
-            user.wins++;
-            user.streak = (user.streak || 0) + 1;
-            if (user.streak > (user.maxStreak || 0)) {
-                user.maxStreak = user.streak;
+        let eloDelta = 0;
+        if (isRanked) {
+            user.rankedPlayed++;
+            if (isWinner) {
+                eloDelta = 30; // Strictly +30 for Win
+                user.wins++;
+                user.streak = (user.streak || 0) + 1;
+                user.currentLosingStreak = 0;
+                if (user.streak > user.maxStreak) user.maxStreak = user.streak;
+                if (isBot) user.aiDefeated = (user.aiDefeated || 0) + 1;
+                else user.humanDefeated = (user.humanDefeated || 0) + 1;
+            } else if (isDraw) {
+                eloDelta = 0;
+                user.draws = (user.draws || 0) + 1;
+            } else {
+                eloDelta = -30; // Strictly -30 for Loss
+                user.losses++;
+                user.currentLosingStreak = (user.currentLosingStreak || 0) + 1;
+                user.streak = 0;
             }
+
+            user.rating = Math.max(100, user.rating + eloDelta);
+            if (user.rating > user.peakRating) user.peakRating = user.rating;
         } else {
-            eloChange = -30; // Exactly -30 for Loss
-            user.losses++;
-            user.streak = 0; // Streak resets on loss
+            user.casualPlayed = (user.casualPlayed || 0) + 1;
+            if (isWinner) {
+                user.wins++;
+                if (isBot) user.aiDefeated = (user.aiDefeated || 0) + 1;
+                else user.humanDefeated = (user.humanDefeated || 0) + 1;
+            } else if (isDraw) {
+                user.draws = (user.draws || 0) + 1;
+            } else {
+                user.losses++;
+            }
         }
 
-        user.rating = Math.max(100, (user.rating || 1200) + eloChange);
+        if (mode === 'koth' && isWinner) {
+            user.kothWins = (user.kothWins || 0) + 1;
+        }
+
+        const myRole = matchData.myPlayerRole || 1;
+        const oppRole = myRole === 1 ? 2 : 1;
+
+        // Save match record in matches archive with permanent player ID
+        const matchRecord = this.saveMatch({
+            roomCode: matchData.roomCode || null,
+            mode: mode,
+            gameplayMode: gameplayMode,
+            breakCost: matchData.breakCost || 5,
+            isRanked: isRanked,
+            players: [
+                {
+                    userId: user.id,
+                    username: user.username,
+                    role: myRole,
+                    rating: user.rating,
+                    eloDelta: eloDelta,
+                    isWinner: isWinner
+                },
+                {
+                    userId: matchData.opponentUserId || null,
+                    username: opponentName,
+                    role: oppRole,
+                    rating: opponentRating,
+                    eloDelta: -eloDelta,
+                    isBot: isBot
+                }
+            ],
+            winner: isWinner ? myRole : oppRole,
+            winReason: matchData.winReason || (isWinner ? 'Victory' : 'Defeat'),
+            moveCount: matchData.moveCount || 0,
+            durationSec: durationSec,
+            replay: matchData.replay || null
+        });
+
+        // Add to rating transaction history
+        user.ratingHistory.push({
+            timestamp: Date.now(),
+            rating: user.rating,
+            delta: eloDelta,
+            opponent: opponentName,
+            opponentRating: opponentRating,
+            matchId: matchRecord.id
+        });
+
+        // Re-evaluate achievements
+        this.evaluateAchievements(user);
+
+        // Update AI profile if bot opponent
+        if (isBot) {
+            this.recordAiMatchResult(opponentName, !isWinner, -eloDelta);
+        }
+
         this.saveUsers();
 
         return {
-            eloChange,
+            user,
+            matchRecord,
+            eloDelta,
+            eloChange: eloDelta,
             newRating: user.rating,
             streak: user.streak,
             wins: user.wins,
             losses: user.losses
         };
+    }
+
+    // ==========================================
+    // RANKED PROGRESSION (+30 WIN / -30 LOSS) [COMPATIBILITY]
+    // ==========================================
+    recordMatchResult(userId, isWinner, isDraw = false) {
+        return this.recordCompletedMatch(userId, {
+            isWinner,
+            isDraw,
+            isRanked: true,
+            isBot: true,
+            opponentName: 'Bot'
+        });
     }
 
     // Update AI profile rating after ranked bot match
@@ -439,6 +745,133 @@ class FortivexDB {
         return this.matches
             .filter(m => (m.players || []).some(p => (p.username || '').toLowerCase() === lower))
             .slice(0, limit);
+    }
+
+    getRankTier(rating) {
+        if (rating >= 2000) return { name: 'Apex Grandmaster', icon: '👑', color: '#f59e0b', min: 2000, next: null };
+        if (rating >= 1800) return { name: 'Diamond', icon: '💎', color: '#38bdf8', min: 1800, next: 2000 };
+        if (rating >= 1600) return { name: 'Platinum', icon: '💠', color: '#2dd4bf', min: 1600, next: 1800 };
+        if (rating >= 1400) return { name: 'Gold', icon: '🥇', color: '#fbbf24', min: 1400, next: 1600 };
+        if (rating >= 1200) return { name: 'Silver', icon: '🥈', color: '#94a3b8', min: 1200, next: 1400 };
+        return { name: 'Bronze', icon: '🥉', color: '#cd7f32', min: 100, next: 1200 };
+    }
+
+    getUserMatchHistory(userId, page = 1, limit = 10, filter = 'all') {
+        const user = this.getUser(userId) || this.getUserByUsername(userId);
+        if (!user) return { matches: [], totalMatches: 0, page: 1, totalPages: 1 };
+
+        const userLower = (user.username || '').toLowerCase();
+        let filtered = this.matches.filter(m => {
+            const hasUser = (m.players || []).some(p => p.userId === user.id || (p.username || '').toLowerCase() === userLower);
+            if (!hasUser) return false;
+            if (filter === 'ranked') return m.isRanked === true;
+            if (filter === 'casual') return m.isRanked === false;
+            return true;
+        });
+
+        const totalMatches = filtered.length;
+        const totalPages = Math.max(1, Math.ceil(totalMatches / limit));
+        const safePage = Math.min(Math.max(1, parseInt(page, 10) || 1), totalPages);
+        const startIndex = (safePage - 1) * limit;
+        const paged = filtered.slice(startIndex, startIndex + limit);
+
+        const formatted = paged.map(m => {
+            const myPlayer = (m.players || []).find(p => p.userId === user.id || (p.username || '').toLowerCase() === userLower) || {};
+            const opponent = (m.players || []).find(p => p !== myPlayer) || { username: 'Tactical Opponent', rating: 1200, avatar: '🤖', isBot: true };
+            const myRole = myPlayer.role || 1;
+            const isWinner = m.winner === myRole;
+            const isDraw = !m.winner;
+
+            return {
+                id: m.id,
+                timestamp: m.timestamp || Date.now(),
+                roomCode: m.roomCode,
+                mode: m.mode || 'classic',
+                gameplayMode: m.gameplayMode || 'breaking',
+                breakCost: m.breakCost || 5,
+                isRanked: !!m.isRanked,
+                isWinner,
+                isDraw,
+                result: isWinner ? 'VICTORY' : (isDraw ? 'DRAW' : 'DEFEAT'),
+                eloDelta: myPlayer.eloDelta !== undefined ? myPlayer.eloDelta : (isWinner ? 30 : (isDraw ? 0 : -30)),
+                myRating: myPlayer.rating || user.rating,
+                moveCount: m.moveCount || 0,
+                durationSec: m.durationSec || 60,
+                opponent: {
+                    userId: opponent.userId || null,
+                    username: opponent.username || 'Opponent',
+                    rating: opponent.rating || 1200,
+                    avatar: opponent.avatar || (opponent.isBot ? '🤖' : '👤'),
+                    isBot: !!opponent.isBot
+                },
+                hasReplay: !!(this.replays && this.replays[m.id])
+            };
+        });
+
+        return {
+            matches: formatted,
+            totalMatches,
+            page: safePage,
+            totalPages
+        };
+    }
+
+    getUserProfileData(userId) {
+        let user = this.getUser(userId);
+        if (!user) {
+            user = this.getUserByUsername(userId);
+        }
+        if (!user) return null;
+
+        this.ensureUserFields(user);
+        const rankTier = this.getRankTier(user.rating);
+        const dailyStats = this.getUserDailyStats(user.id);
+        const achievements = this.evaluateAchievements(user);
+        const ratingHistory = this.getRatingHistory(user.id, 'all');
+        const recentMatches = this.getUserMatchHistory(user.id, 1, 10, 'all');
+
+        const winRate = user.matchesPlayed > 0 ? Math.round((user.wins / user.matchesPlayed) * 100) : 0;
+        const avgMatchDurationSec = user.matchesPlayed > 0 ? Math.round(user.totalPlayTimeSec / user.matchesPlayed) : 0;
+
+        return {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName || user.username,
+            avatar: user.avatar || '💎',
+            isGuest: !!user.isGuest,
+            accountType: user.isGuest ? 'Guest Account' : (user.social ? Object.keys(user.social)[0] : 'Registered Account'),
+            createdAt: user.createdAt,
+            lastActive: user.lastActive,
+            rankTier,
+            rating: user.rating,
+            peakRating: user.peakRating,
+            mainStats: {
+                totalGames: user.matchesPlayed,
+                totalWins: user.wins,
+                totalLosses: user.losses,
+                draws: user.draws,
+                winRate,
+                currentRating: user.rating,
+                bestRating: user.peakRating,
+                currentWinningStreak: user.streak,
+                bestWinningStreak: user.maxStreak,
+                currentLosingStreak: user.currentLosingStreak
+            },
+            additionalStats: {
+                rankedPlayed: user.rankedPlayed,
+                casualPlayed: user.casualPlayed,
+                humanDefeated: user.humanDefeated,
+                aiDefeated: user.aiDefeated,
+                avgMatchDurationSec,
+                totalPlayTimeSec: user.totalPlayTimeSec,
+                dailyGames: dailyStats.dailyGames,
+                dailyWins: dailyStats.dailyWins,
+                dailyLosses: dailyStats.dailyLosses
+            },
+            achievements,
+            ratingHistory,
+            recentMatches
+        };
     }
 
     getLeaderboard(limit = 20) {

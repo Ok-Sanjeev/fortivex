@@ -295,13 +295,96 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 4. User Profile & Stats
+    // 4. User Profile & Stats Bundle
     if (req.method === 'GET' && reqPath === '/api/user/profile') {
-        const userId = parsedUrl.query.userId;
-        const user = db.getUser(userId);
-        if (!user) return sendJson(res, 404, { success: false, reason: 'User not found' });
-        const recentMatches = db.getUserMatches(user.username, 8);
-        sendJson(res, 200, { success: true, user, recentMatches });
+        const userId = parsedUrl.query.userId || parsedUrl.query.username;
+        const profile = db.getUserProfileData(userId);
+        if (!profile) return sendJson(res, 404, { success: false, reason: 'User not found' });
+        sendJson(res, 200, {
+            success: true,
+            profile,
+            user: {
+                id: profile.id,
+                username: profile.username,
+                displayName: profile.displayName,
+                avatar: profile.avatar,
+                rating: profile.rating,
+                streak: profile.mainStats.currentWinningStreak,
+                isGuest: profile.isGuest
+            },
+            recentMatches: profile.recentMatches ? profile.recentMatches.matches : []
+        });
+        return;
+    }
+
+    // 4b. Update Profile Avatar
+    if (req.method === 'POST' && reqPath === '/api/user/update-avatar') {
+        parseJsonBody(req, (err, data) => {
+            if (err || !data.userId || !data.avatar) {
+                return sendJson(res, 400, { success: false, reason: 'Missing userId or avatar' });
+            }
+            const result = db.updateAvatar(data.userId, data.avatar);
+            sendJson(res, result.success ? 200 : 400, result);
+        });
+        return;
+    }
+
+    // 4c. Paginated Match History
+    if (req.method === 'GET' && reqPath === '/api/user/matches') {
+        const userId = parsedUrl.query.userId || parsedUrl.query.username;
+        const page = parseInt(parsedUrl.query.page || '1', 10);
+        const limit = parseInt(parsedUrl.query.limit || '10', 10);
+        const filter = parsedUrl.query.filter || 'all';
+        const history = db.getUserMatchHistory(userId, page, limit, filter);
+        sendJson(res, 200, { success: true, ...history });
+        return;
+    }
+
+    // 4d. Rating Progression History Points
+    if (req.method === 'GET' && reqPath === '/api/user/rating-history') {
+        const userId = parsedUrl.query.userId || parsedUrl.query.username;
+        const period = parsedUrl.query.period || 'all'; // '7d', '30d', 'all'
+        const history = db.getRatingHistory(userId, period);
+        sendJson(res, 200, { success: true, history });
+        return;
+    }
+
+    // 4e. Record Completed Match / Ranked Result
+    if (req.method === 'POST' && (reqPath === '/api/user/record-match' || reqPath === '/api/user/ranked-result')) {
+        parseJsonBody(req, (err, data) => {
+            if (err || !data.userId) {
+                return sendJson(res, 400, { success: false, reason: 'Missing userId' });
+            }
+            const result = db.recordCompletedMatch(data.userId, {
+                isWinner: data.isWinner !== undefined ? !!data.isWinner : !!data.isWin,
+                isDraw: !!data.isDraw,
+                isRanked: data.isRanked !== undefined ? !!data.isRanked : true,
+                isBot: data.isBot !== undefined ? !!data.isBot : true,
+                opponentName: data.opponentName || 'Opponent',
+                opponentRating: parseInt(data.opponentRating || '1200', 10),
+                opponentUserId: data.opponentUserId || null,
+                durationSec: parseInt(data.durationSec || '60', 10),
+                mode: data.mode || 'classic',
+                gameplayMode: data.gameplayMode || 'breaking',
+                breakCost: parseInt(data.breakCost || '5', 10),
+                wallsPlaced: parseInt(data.wallsPlaced || '0', 10),
+                wallsBroken: parseInt(data.wallsBroken || '0', 10),
+                moveCount: parseInt(data.moveCount || '0', 10),
+                replay: data.replay || null
+            });
+            if (!result) return sendJson(res, 404, { success: false, reason: 'User not found' });
+            sendJson(res, 200, { success: true, user: result.user, eloDelta: result.eloDelta, match: result.matchRecord });
+        });
+        return;
+    }
+
+    // 4f. Fetch Match Replay
+    if (req.method === 'GET' && reqPath === '/api/replay') {
+        const matchId = parsedUrl.query.matchId;
+        if (!matchId) return sendJson(res, 400, { success: false, reason: 'Missing matchId' });
+        const replay = db.getReplay(matchId);
+        if (!replay) return sendJson(res, 404, { success: false, reason: 'Replay not found' });
+        sendJson(res, 200, { success: true, replay });
         return;
     }
 

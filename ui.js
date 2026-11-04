@@ -62,9 +62,11 @@ class BarricadeUI {
         let storedUser = localStorage.getItem('fortivex_username') || localStorage.getItem('barricade_username');
         let storedSignedIn = (localStorage.getItem('fortivex_signed_in') || localStorage.getItem('barricade_signed_in')) === 'true';
 
-        // Default sequential username starts at noob10001
-        if (!storedUser || storedUser.startsWith('user_')) {
-            storedUser = 'noob10001';
+        // Default sequential username starts at noob10116
+        if (!this.userId || !storedUser || storedUser.startsWith('user_')) {
+            storedUser = 'noob10116';
+            this.userId = 'usr_10116_m0cvq4';
+            localStorage.setItem('fortivex_user_id', this.userId);
             localStorage.setItem('fortivex_username', storedUser);
             localStorage.setItem('fortivex_signed_in', 'false');
             this.isSignedIn = false;
@@ -208,6 +210,7 @@ class BarricadeUI {
         // Views
         this.homeView = document.getElementById('home-screen-view');
         this.gameView = document.getElementById('game-screen-view');
+        this.profileView = document.getElementById('profile-screen-view');
 
         // Modals & Bottom Sheets
         this.createGameSheet = document.getElementById('create-game-sheet');
@@ -216,9 +219,16 @@ class BarricadeUI {
         this.chatSheet = document.getElementById('chat-sheet');
         this.gameOverSheet = document.getElementById('gameover-sheet');
         this.signInSheet = document.getElementById('signin-sheet');
+        this.editProfileSheet = document.getElementById('edit-profile-sheet');
         this.dailyCompleteSheet = document.getElementById('daily-complete-sheet');
         this.matchmakingOverlay = document.getElementById('matchmaking-overlay');
         this.roomLobbyOverlay = document.getElementById('room-lobby-overlay');
+
+        // Profile Nav & Buttons
+        this.btnProfileBack = document.getElementById('btn-profile-back');
+        this.btnOpenEditProfile = document.getElementById('btn-open-edit-profile');
+        this.btnSaveProfileChanges = document.getElementById('btn-save-profile-changes');
+        this.btnProfileBannerLink = document.getElementById('btn-profile-banner-link');
 
         // Sign In Form Elements
         this.signInInput = document.getElementById('signin-username-input');
@@ -354,10 +364,93 @@ class BarricadeUI {
     }
 
     bindEvents() {
-        // Sign In Sheet
-        this.homeUserBadge?.addEventListener('click', () => this.openSignInSheet());
+        // Independent Profile & Sign In Navigation
+        this.homeUserBadge?.addEventListener('click', () => this.openProfileScreen());
+        document.getElementById('p1-name-wrapper')?.addEventListener('click', () => this.openProfileScreen());
         this.homeSignInPrompt?.addEventListener('click', () => this.openSignInSheet());
-        document.getElementById('p1-name-wrapper')?.addEventListener('click', () => this.openSignInSheet());
+
+        // Profile Top Bar & Navigation
+        this.btnProfileBack?.addEventListener('click', () => this.switchView('home'));
+        this.btnOpenEditProfile?.addEventListener('click', () => this.openEditProfileSheet());
+        this.btnProfileBannerLink?.addEventListener('click', () => this.openSignInSheet());
+        this.btnSaveProfileChanges?.addEventListener('click', () => this.saveProfileChanges());
+        document.getElementById('btn-edit-open-link')?.addEventListener('click', () => {
+            this.editProfileSheet?.classList.remove('open');
+            this.openSignInSheet();
+        });
+
+        // Social Authentication in Sign In modal
+        document.getElementById('btn-auth-google')?.addEventListener('click', () => this.handleSocialLogin('Google'));
+        document.getElementById('btn-auth-facebook')?.addEventListener('click', () => this.handleSocialLogin('Facebook'));
+
+        // Profile 5 Tabs Switching
+        document.querySelectorAll('.profile-tab-item').forEach(tabBtn => {
+            tabBtn.addEventListener('click', () => {
+                document.querySelectorAll('.profile-tab-item').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.profile-tab-view').forEach(v => v.classList.remove('active'));
+                tabBtn.classList.add('active');
+                const tabName = tabBtn.dataset.tab;
+                const targetView = document.getElementById(`profile-view-${tabName}`);
+                if (targetView) targetView.classList.add('active');
+                if (tabName === 'rating') {
+                    this.renderRatingHistoryTab(this.userId, this.ratingPeriodFilter || 'all');
+                } else if (tabName === 'matches') {
+                    this.renderMatchHistoryTab(this.userId, this.matchesCurrentPage || 1, this.matchesFilter || 'all');
+                }
+            });
+        });
+
+        // Rating Period Filter Pills
+        document.querySelectorAll('.rating-period-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.rating-period-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                this.ratingPeriodFilter = pill.dataset.period;
+                this.renderRatingHistoryTab(this.userId, this.ratingPeriodFilter);
+            });
+        });
+
+        // Match History Filter Pills
+        document.querySelectorAll('.match-history-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.match-history-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                this.matchesFilter = pill.dataset.filter;
+                this.matchesCurrentPage = 1;
+                this.renderMatchHistoryTab(this.userId, 1, this.matchesFilter);
+            });
+        });
+
+        // Match Pagination
+        document.getElementById('btn-matches-prev')?.addEventListener('click', () => {
+            if (this.matchesCurrentPage > 1) {
+                this.matchesCurrentPage--;
+                this.renderMatchHistoryTab(this.userId, this.matchesCurrentPage, this.matchesFilter || 'all');
+            }
+        });
+        document.getElementById('btn-matches-next')?.addEventListener('click', () => {
+            if (this.matchesCurrentPage < this.matchesTotalPages) {
+                this.matchesCurrentPage++;
+                this.renderMatchHistoryTab(this.userId, this.matchesCurrentPage, this.matchesFilter || 'all');
+            }
+        });
+
+        // Overview shortcuts to tabs
+        document.getElementById('btn-see-all-matches')?.addEventListener('click', () => {
+            document.querySelector('.profile-tab-item[data-tab="matches"]')?.click();
+        });
+        document.getElementById('btn-see-all-achievements')?.addEventListener('click', () => {
+            document.querySelector('.profile-tab-item[data-tab="achievements"]')?.click();
+        });
+
+        // Avatar Picker Choice Pills
+        document.querySelectorAll('.avatar-choice-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.avatar-choice-pill').forEach(p => p.classList.remove('selected'));
+                pill.classList.add('selected');
+                this.selectedAvatar = pill.dataset.avatar;
+            });
+        });
 
         this.btnSubmitSignIn?.addEventListener('click', () => this.handleSignInSubmit());
         this.signInInput?.addEventListener('keydown', (e) => {
@@ -1605,10 +1698,16 @@ class BarricadeUI {
         if (viewName === 'home') {
             this.homeView.style.display = 'flex';
             this.gameView.style.display = 'none';
+            if (this.profileView) this.profileView.style.display = 'none';
             this.fetchPublicRooms();
+        } else if (viewName === 'profile') {
+            this.homeView.style.display = 'none';
+            this.gameView.style.display = 'none';
+            if (this.profileView) this.profileView.style.display = 'flex';
         } else {
             this.homeView.style.display = 'none';
             this.gameView.style.display = 'flex';
+            if (this.profileView) this.profileView.style.display = 'none';
         }
     }
 
@@ -1922,13 +2021,29 @@ class BarricadeUI {
             localStorage.setItem(`fortivex_streak_${this.username}`, this.userStreak);
 
             if (this.userId) {
-                fetch('/api/user/ranked-result', {
+                const matchDuration = this.matchStartTime ? Math.floor((Date.now() - this.matchStartTime) / 1000) : 45;
+                const totalMoves = (this.game && this.game.moveHistory) ? this.game.moveHistory.length : 0;
+                fetch('/api/user/record-match', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         userId: this.userId,
-                        isWin: isWin,
-                        opponentName: this.opponentName
+                        isWinner: isWin,
+                        isRanked: this.isRanked,
+                        isBot: this.playType === 'bot' || !this.activeRoomCode,
+                        opponentName: this.opponentName || 'Opponent',
+                        opponentRating: this.opponentRating || 1200,
+                        durationSec: matchDuration,
+                        mode: this.game?.mode || 'classic',
+                        gameplayMode: this.game?.gameplayMode || 'breaking',
+                        breakCost: this.game?.breakCost || 5,
+                        wallsPlaced: this.game?.wallsPlacedCount || 0,
+                        wallsBroken: this.game?.wallsBrokenCount || 0,
+                        moveCount: totalMoves,
+                        replay: this.game ? {
+                            initialState: this.initialGameState,
+                            moves: this.game.moveHistory || []
+                        } : null
                     })
                 }).catch(() => {});
             }
@@ -2151,6 +2266,10 @@ class BarricadeUI {
         }
         if (this.homeStreakBadge) {
             this.homeStreakBadge.textContent = `${this.userStreak}`;
+        }
+        const avatarEl = document.getElementById('home-user-avatar');
+        if (avatarEl) {
+            avatarEl.textContent = this.userAvatar || '💎';
         }
 
         // Show Sign In CTA if user has default name
@@ -2380,6 +2499,582 @@ class BarricadeUI {
             const color = colors[lastMove.turn] || 'var(--text-white)';
             this.moveLogText.innerHTML = `<span style="color:var(--text-dim);">${moveNum}.</span> <span style="color:${color};">${lastMove.desc}</span>`;
         }
+    }
+
+    // ==========================================
+    // DEDICATED PLAYER PROFILE & COMPETITIVE DASHBOARD
+    // ==========================================
+    openProfileScreen() {
+        this.switchView('profile');
+        if (!this.userId) {
+            this.userId = localStorage.getItem('fortivex_user_id') || 'usr_10116_m0cvq4';
+        }
+
+        // Show loading or cached state
+        fetch(`/api/user/profile?userId=${this.userId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.profile) {
+                    this.currentProfileData = data.profile;
+                    this.renderProfileData(data.profile);
+                } else {
+                    this.showToast('Failed to load profile data');
+                }
+            })
+            .catch(() => {
+                this.showToast('Network error loading profile');
+            });
+    }
+
+    renderProfileData(profile) {
+        // 1. Header Information
+        const avatarEl = document.getElementById('profile-avatar-display');
+        if (avatarEl) avatarEl.textContent = profile.avatar || '💎';
+        this.userAvatar = profile.avatar || '💎';
+
+        const nameEl = document.getElementById('profile-display-name');
+        if (nameEl) nameEl.textContent = profile.displayName || profile.username;
+
+        const idEl = document.getElementById('profile-player-id');
+        if (idEl) idEl.textContent = `ID: ${profile.id}`;
+
+        const ratingEl = document.getElementById('profile-rating-badge');
+        if (ratingEl) ratingEl.textContent = `⭐ ${profile.rating} ELO`;
+
+        const tierEl = document.getElementById('profile-tier-badge');
+        if (tierEl && profile.rankTier) {
+            tierEl.textContent = `${profile.rankTier.icon} ${profile.rankTier.name}`;
+            const tierClass = profile.rankTier.name.toLowerCase().replace(/\s+/g, '-');
+            tierEl.className = `profile-rank-tier tier-${tierClass}`;
+        }
+
+        const accountEl = document.getElementById('profile-account-type-badge');
+        if (accountEl) {
+            accountEl.textContent = profile.isGuest ? '👤 Guest' : (profile.accountType || '👤 Linked');
+        }
+
+        const memberEl = document.getElementById('profile-member-since');
+        if (memberEl) {
+            const joinDate = new Date(profile.createdAt || Date.now());
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            memberEl.textContent = `📅 Joined ${months[joinDate.getMonth()]} ${joinDate.getFullYear()}`;
+        }
+
+        const guestBanner = document.getElementById('profile-guest-link-banner');
+        if (guestBanner) {
+            guestBanner.style.display = profile.isGuest ? 'flex' : 'none';
+        }
+
+        // 2. Tab 1: Overview
+        this.renderOverviewTab(profile);
+
+        // 3. Tab 2: Statistics (10 Main + 9 Additional)
+        this.renderStatsTab(profile);
+
+        // 4. Tab 3: Rating History
+        this.renderRatingHistoryTab(profile.id, this.ratingPeriodFilter || 'all');
+
+        // 5. Tab 4: Match History
+        this.renderMatchHistoryTab(profile.id, this.matchesCurrentPage || 1, this.matchesFilter || 'all');
+
+        // 6. Tab 5: Achievements
+        this.renderAchievementsTab(profile.achievements || []);
+
+        // Also sync home screen badge
+        this.username = profile.displayName || profile.username;
+        this.userRating = profile.rating;
+        this.userStreak = profile.mainStats?.currentWinningStreak || 0;
+        this.renderUserBadges();
+    }
+
+    renderOverviewTab(profile) {
+        const peakEl = document.getElementById('ov-peak-rating');
+        if (peakEl) peakEl.textContent = profile.peakRating || profile.rating || 1200;
+
+        const streakEl = document.getElementById('ov-curr-streak');
+        if (streakEl) streakEl.textContent = profile.mainStats?.currentWinningStreak || 0;
+
+        const winRateEl = document.getElementById('ov-win-rate');
+        if (winRateEl) winRateEl.textContent = `${profile.mainStats?.winRate || 0}%`;
+
+        const totalEl = document.getElementById('ov-total-games');
+        if (totalEl) totalEl.textContent = profile.mainStats?.totalGames || 0;
+
+        // Mini Recent Matches List (first 3)
+        const miniList = document.getElementById('profile-mini-matches-list');
+        if (miniList) {
+            const matches = profile.recentMatches?.matches || [];
+            if (matches.length === 0) {
+                miniList.innerHTML = `<div class="profile-empty-state">No completed matches yet. Jump into Ranked to build your record!</div>`;
+            } else {
+                miniList.innerHTML = matches.slice(0, 3).map(m => `
+                    <div class="match-card-item" style="padding: 8px 10px; margin-bottom: 6px;">
+                        <div class="match-card-left">
+                            <span class="match-result-badge res-${m.result.toLowerCase()}">${m.result}</span>
+                            <div class="match-opponent-row" style="font-size: 0.74rem;">
+                                <span>${m.opponent.avatar}</span>
+                                <span>${m.opponent.username}</span>
+                                <span style="font-size: 0.65rem; color: #f59e0b;">(${m.opponent.rating})</span>
+                            </div>
+                        </div>
+                        <div class="match-card-right">
+                            <span class="match-elo-delta ${m.isWinner ? 'win' : 'loss'}">${m.eloDelta > 0 ? '+' + m.eloDelta : m.eloDelta}</span>
+                            <span style="font-size: 0.64rem; color: #64748b;">${Math.round(m.durationSec)}s</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Mini Achievements Spotlight
+        const miniAchieve = document.getElementById('profile-mini-achievements-list');
+        if (miniAchieve) {
+            const achievements = profile.achievements || [];
+            const displayList = achievements.slice(0, 4);
+            miniAchieve.innerHTML = displayList.map(a => `
+                <div class="mini-achieve-badge ${a.unlocked ? 'unlocked' : ''}">
+                    <span class="mini-achieve-icon">${a.icon}</span>
+                    <span class="mini-achieve-name">${a.name}</span>
+                </div>
+            `).join('');
+        }
+    }
+
+    renderStatsTab(profile) {
+        const m = profile.mainStats || {};
+        const a = profile.additionalStats || {};
+
+        // 10 Main Career Stats
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val !== undefined ? val : 0;
+        };
+
+        setVal('stat-total-games', m.totalGames);
+        setVal('stat-total-wins', m.totalWins);
+        setVal('stat-total-losses', m.totalLosses);
+        setVal('stat-draws', m.draws);
+        setVal('stat-win-rate', `${m.winRate || 0}%`);
+        setVal('stat-current-rating', m.currentRating || 1200);
+        setVal('stat-peak-rating', m.bestRating || m.currentRating || 1200);
+        setVal('stat-curr-streak', m.currentWinningStreak);
+        setVal('stat-best-streak', m.bestWinningStreak);
+        setVal('stat-losing-streak', m.currentLosingStreak);
+
+        // 9 Additional Competitive Stats
+        setVal('stat-ranked-played', a.rankedPlayed);
+        setVal('stat-casual-played', a.casualPlayed);
+        setVal('stat-human-defeated', a.humanDefeated);
+        setVal('stat-ai-defeated', a.aiDefeated);
+        setVal('stat-avg-duration', `${a.avgMatchDurationSec || 0}s`);
+        setVal('stat-total-playtime', `${Math.round((a.totalPlayTimeSec || 0) / 60)}m`);
+        setVal('stat-daily-games', a.dailyGames);
+        setVal('stat-daily-wins', a.dailyWins);
+        setVal('stat-daily-losses', a.dailyLosses);
+    }
+
+    renderRatingHistoryTab(userId, period = 'all') {
+        fetch(`/api/user/rating-history?userId=${userId}&period=${period}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.history) {
+                    const h = data.history;
+                    const currEl = document.getElementById('chart-curr-rating');
+                    if (currEl) currEl.textContent = h.currentRating;
+                    const peakEl = document.getElementById('chart-peak-rating');
+                    if (peakEl) peakEl.textContent = h.peakRating;
+                    const startEl = document.getElementById('chart-start-rating');
+                    if (startEl) startEl.textContent = h.startRating;
+                    const netEl = document.getElementById('chart-net-change');
+                    if (netEl) {
+                        netEl.textContent = `${h.netChange >= 0 ? '+' : ''}${h.netChange}`;
+                        netEl.style.color = h.netChange > 0 ? '#22c55e' : (h.netChange < 0 ? '#ef4444' : '#fff');
+                    }
+
+                    this.drawRatingSvgChart(h.points, h.startRating, h.currentRating);
+                    this.renderRatingTransactions(h.points);
+                }
+            })
+            .catch(() => {});
+    }
+
+    drawRatingSvgChart(points, startRating, currentRating) {
+        const svg = document.getElementById('rating-history-svg');
+        if (!svg) return;
+
+        let chartData = points && points.length > 0 ? points : [
+            { timestamp: Date.now() - 86400000, rating: startRating || 1200, delta: 0, opponent: 'Start' },
+            { timestamp: Date.now(), rating: currentRating || 1200, delta: 0, opponent: 'Current' }
+        ];
+
+        if (chartData.length === 1) {
+            chartData = [
+                { timestamp: chartData[0].timestamp - 86400000, rating: startRating || chartData[0].rating, delta: 0, opponent: 'Initial' },
+                chartData[0]
+            ];
+        }
+
+        const ratings = chartData.map(p => p.rating);
+        let minRating = Math.min(...ratings, 1100);
+        let maxRating = Math.max(...ratings, 1300);
+        minRating = Math.floor((minRating - 30) / 50) * 50;
+        maxRating = Math.ceil((maxRating + 30) / 50) * 50;
+        const ratingRange = Math.max(50, maxRating - minRating);
+
+        const svgWidth = 380;
+        const svgHeight = 180;
+        const padX = 35;
+        const padY = 25;
+        const plotWidth = svgWidth - padX - 15;
+        const plotHeight = svgHeight - padY - 20;
+
+        const getY = (val) => padY + plotHeight - ((val - minRating) / ratingRange) * plotHeight;
+        const getX = (idx) => padX + (idx / (chartData.length - 1)) * plotWidth;
+
+        let gridLines = '';
+        const step = ratingRange <= 150 ? 50 : 100;
+        for (let r = minRating; r <= maxRating; r += step) {
+            const y = getY(r);
+            gridLines += `
+                <line x1="${padX}" y1="${y}" x2="${svgWidth - 15}" y2="${y}" stroke="#242630" stroke-width="1" stroke-dasharray="3,3" />
+                <text x="${padX - 6}" y="${y + 3}" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">${r}</text>
+            `;
+        }
+
+        const coords = chartData.map((p, idx) => ({
+            x: getX(idx),
+            y: getY(p.rating),
+            point: p
+        }));
+
+        const polylinePoints = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+        const areaPoints = `${coords[0].x.toFixed(1)},${getY(minRating).toFixed(1)} ${polylinePoints} ${coords[coords.length - 1].x.toFixed(1)},${getY(minRating).toFixed(1)}`;
+
+        const circles = coords.map((c, idx) => `
+            <circle class="chart-data-dot" cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4.5" fill="#3b82f6" stroke="#131418" stroke-width="2"
+                data-rating="${c.point.rating}" data-delta="${c.point.delta || 0}" data-opp="${c.point.opponent || 'Ranked'}" data-time="${new Date(c.point.timestamp).toLocaleDateString()}" />
+        `).join('');
+
+        svg.innerHTML = `
+            <defs>
+                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.35" />
+                    <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
+                </linearGradient>
+            </defs>
+            ${gridLines}
+            <polygon points="${areaPoints}" fill="url(#chartGradient)" />
+            <polyline points="${polylinePoints}" fill="none" stroke="#3b82f6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            ${circles}
+        `;
+
+        const tooltip = document.getElementById('chart-tooltip');
+        svg.querySelectorAll('.chart-data-dot').forEach(dot => {
+            const showTip = (e) => {
+                const rating = dot.dataset.rating;
+                const delta = parseInt(dot.dataset.delta, 10);
+                const opp = dot.dataset.opp;
+                const time = dot.dataset.time;
+                const deltaStr = delta > 0 ? `+${delta}` : (delta < 0 ? `${delta}` : '0');
+                if (tooltip) {
+                    tooltip.innerHTML = `<strong>${rating} ELO</strong> (${deltaStr})<br><span style="color:#94a3b8;">vs ${opp} • ${time}</span>`;
+                    tooltip.style.display = 'block';
+                    const cx = parseFloat(dot.getAttribute('cx'));
+                    const cy = parseFloat(dot.getAttribute('cy'));
+                    tooltip.style.left = `${Math.min(cx, 260)}px`;
+                    tooltip.style.top = `${Math.max(cy - 40, 10)}px`;
+                }
+            };
+            dot.addEventListener('mouseenter', showTip);
+            dot.addEventListener('click', showTip);
+        });
+
+        svg.addEventListener('mouseleave', () => {
+            if (tooltip) tooltip.style.display = 'none';
+        });
+    }
+
+    renderRatingTransactions(points) {
+        const list = document.getElementById('rating-transactions-list');
+        if (!list) return;
+
+        if (!points || points.length === 0) {
+            list.innerHTML = `<div class="profile-empty-state">No rating transactions recorded yet.</div>`;
+            return;
+        }
+
+        const reversed = [...points].reverse().slice(0, 15);
+        list.innerHTML = reversed.map(pt => {
+            const isWin = (pt.delta || 0) > 0;
+            const isLoss = (pt.delta || 0) < 0;
+            const deltaClass = isWin ? 'win' : (isLoss ? 'loss' : '');
+            const deltaStr = (pt.delta || 0) > 0 ? `+${pt.delta}` : (pt.delta || '0');
+            const dateStr = new Date(pt.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            return `
+                <div class="rating-tx-item">
+                    <div class="tx-opp-info">
+                        <span class="tx-opp-name">${pt.note ? pt.note : 'Ranked Match vs ' + (pt.opponent || 'Opponent')}</span>
+                        <span class="tx-opp-date">${dateStr}</span>
+                    </div>
+                    <div class="tx-rating-col">
+                        <span class="tx-delta-badge ${deltaClass}">${deltaStr}</span>
+                        <span class="tx-curr-val">${pt.rating}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderMatchHistoryTab(userId, page = 1, filter = 'all') {
+        this.matchesCurrentPage = page;
+        this.matchesFilter = filter;
+
+        fetch(`/api/user/matches?userId=${userId}&page=${page}&limit=5&filter=${filter}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    this.matchesTotalPages = data.totalPages || 1;
+                    const pageLabel = document.getElementById('matches-page-label');
+                    if (pageLabel) pageLabel.textContent = `Page ${data.page} of ${this.matchesTotalPages}`;
+
+                    const prevBtn = document.getElementById('btn-matches-prev');
+                    if (prevBtn) prevBtn.disabled = data.page <= 1;
+
+                    const nextBtn = document.getElementById('btn-matches-next');
+                    if (nextBtn) nextBtn.disabled = data.page >= this.matchesTotalPages;
+
+                    const container = document.getElementById('profile-matches-container');
+                    if (!container) return;
+
+                    if (!data.matches || data.matches.length === 0) {
+                        container.innerHTML = `<div class="profile-empty-state">No matches found for this filter. Complete Ranked matches to build your career history!</div>`;
+                        return;
+                    }
+
+                    container.innerHTML = data.matches.map(m => {
+                        const dateStr = new Date(m.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        const modeStr = `${m.isRanked ? 'Ranked' : 'Casual'} • ${m.gameplayMode === 'breaking' ? 'Breaking (Cost ' + m.breakCost + ')' : 'Normal'}`;
+                        const deltaStr = m.eloDelta > 0 ? `+${m.eloDelta}` : `${m.eloDelta}`;
+                        const deltaClass = m.isWinner ? 'win' : (m.isDraw ? '' : 'loss');
+
+                        return `
+                            <div class="match-card-item">
+                                <div class="match-card-left">
+                                    <span class="match-result-badge res-${m.result.toLowerCase()}">${m.result}</span>
+                                    <div class="match-opponent-row">
+                                        <span>${m.opponent.avatar || '🤖'}</span>
+                                        <span>${m.opponent.username}</span>
+                                        <span style="font-size: 0.7rem; color: #f59e0b;">(${m.opponent.rating})</span>
+                                    </div>
+                                    <div class="match-mode-sub">${modeStr} • ${Math.round(m.durationSec)}s • ${dateStr}</div>
+                                </div>
+                                <div class="match-card-right">
+                                    <span class="match-elo-delta ${deltaClass}">${deltaStr}</span>
+                                    <button class="btn-watch-replay" data-match-id="${m.id}">▶ Watch Replay</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    container.querySelectorAll('.btn-watch-replay').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const matchId = btn.dataset.matchId;
+                            this.loadMatchReplay(matchId);
+                        });
+                    });
+                }
+            })
+            .catch(() => {});
+    }
+
+    renderAchievementsTab(achievements) {
+        const container = document.getElementById('profile-achievements-container');
+        if (!container) return;
+
+        const unlockedCount = achievements.filter(a => a.unlocked).length;
+        const countLabel = document.getElementById('achievements-unlocked-count');
+        if (countLabel) countLabel.textContent = `${unlockedCount} of ${achievements.length} Unlocked`;
+
+        container.innerHTML = achievements.map(a => {
+            const pct = Math.min(100, Math.round((a.progress / a.max) * 100));
+            return `
+                <div class="achievement-card ${a.unlocked ? 'unlocked' : ''}">
+                    <div class="achieve-icon-box">${a.icon}</div>
+                    <div class="achieve-info">
+                        <div class="achieve-name">${a.name}</div>
+                        <div class="achieve-desc">${a.desc}</div>
+                        <div class="achieve-bar-container">
+                            <div class="achieve-bar-fill" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                    <div class="achieve-status-col">
+                        <span class="achieve-fraction">${a.progress} / ${a.max}</span>
+                        ${a.unlocked
+                            ? `<span class="achieve-badge-unlocked">Unlocked</span>`
+                            : `<span class="achieve-badge-locked">Locked 🔒</span>`}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    openEditProfileSheet() {
+        if (!this.currentProfileData) {
+            this.openProfileScreen();
+            return;
+        }
+
+        const input = document.getElementById('edit-profile-displayname-input');
+        if (input) input.value = this.currentProfileData.displayName || this.currentProfileData.username;
+
+        const statusLabel = document.getElementById('edit-account-status-label');
+        if (statusLabel) {
+            statusLabel.textContent = this.currentProfileData.isGuest
+                ? 'Guest Account (Unlinked)'
+                : `${this.currentProfileData.accountType} Linked`;
+        }
+
+        this.selectedAvatar = this.currentProfileData.avatar || '💎';
+        document.querySelectorAll('.avatar-choice-pill').forEach(pill => {
+            if (pill.dataset.avatar === this.selectedAvatar) {
+                pill.classList.add('selected');
+            } else {
+                pill.classList.remove('selected');
+            }
+        });
+
+        this.editProfileSheet?.classList.add('open');
+    }
+
+    saveProfileChanges() {
+        const input = document.getElementById('edit-profile-displayname-input');
+        const newName = input ? input.value.trim() : '';
+
+        // 1. Update avatar
+        if (this.selectedAvatar && this.selectedAvatar !== this.currentProfileData?.avatar) {
+            fetch('/api/user/update-avatar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: this.userId, avatar: this.selectedAvatar })
+            }).catch(() => {});
+        }
+
+        // 2. Update display name if changed
+        if (newName && newName !== this.currentProfileData?.username && newName !== this.currentProfileData?.displayName) {
+            fetch('/api/auth/custom-name', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: this.userId, username: newName })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.user) {
+                    this.username = data.user.username;
+                    localStorage.setItem('fortivex_username', this.username);
+                    this.editProfileSheet?.classList.remove('open');
+                    this.showToast('Profile updated successfully!');
+                    sounds.playVictory();
+                    this.openProfileScreen();
+                } else {
+                    this.showToast(data.reason || 'Display name already taken');
+                    sounds.playIllegal();
+                }
+            })
+            .catch(() => {
+                this.editProfileSheet?.classList.remove('open');
+                this.openProfileScreen();
+            });
+        } else {
+            this.editProfileSheet?.classList.remove('open');
+            this.showToast('Profile updated!');
+            sounds.playVictory();
+            this.openProfileScreen();
+        }
+    }
+
+    loadMatchReplay(matchId) {
+        fetch(`/api/replay?matchId=${matchId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.replay) {
+                    this.showToast('Loading Match Replay...');
+                    this.playType = 'replay';
+                    this.isWatchMode = true;
+                    this.switchView('game');
+
+                    this.startNewMatch({ mode: 'classic', initialWalls: 10, timeSec: 300 });
+
+                    const moves = data.replay.moves || [];
+                    let moveIdx = 0;
+                    if (this.replayInterval) clearInterval(this.replayInterval);
+
+                    this.replayInterval = setInterval(() => {
+                        if (moveIdx >= moves.length || this.currentView !== 'game') {
+                            clearInterval(this.replayInterval);
+                            this.showToast('Replay finished');
+                            return;
+                        }
+                        const m = moves[moveIdx];
+                        if (m.type === 'move') {
+                            this.game.movePawn(m.player, m.to.x, m.to.y);
+                        } else if (m.type === 'wall') {
+                            this.game.placeWall(m.player, m.pos.x, m.pos.y, m.orientation);
+                        } else if (m.type === 'break') {
+                            this.game.breakWall(m.player, m.wallIndex);
+                        }
+                        this.render();
+                        moveIdx++;
+                    }, 1000);
+                } else {
+                    this.showToast('Replay data not available for this match');
+                }
+            })
+            .catch(() => {
+                this.showToast('Error loading replay');
+            });
+    }
+
+    handleSocialLogin(provider) {
+        if (!this.userId) {
+            this.showToast('Connecting account...');
+            return;
+        }
+        const mockProviderId = `${provider.toLowerCase()}_${Math.random().toString(36).substr(2, 9)}`;
+        const mockEmail = `${this.username.toLowerCase()}@${provider.toLowerCase()}.com`;
+
+        fetch('/api/auth/social', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: this.userId,
+                provider: provider.toLowerCase(),
+                providerId: mockProviderId,
+                email: mockEmail,
+                name: this.username
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.user) {
+                this.isSignedIn = true;
+                this.userAccountType = provider;
+                localStorage.setItem('fortivex_signed_in', 'true');
+                this.signInSheet?.classList.remove('open');
+                this.editProfileSheet?.classList.remove('open');
+                this.showToast(`Successfully linked ${provider} account!`);
+                sounds.playVictory();
+                this.render();
+                if (this.currentView === 'profile') {
+                    this.openProfileScreen();
+                }
+            } else {
+                this.showToast('Social login failed. Try again.');
+            }
+        })
+        .catch(() => {
+            this.showToast('Connected to network');
+        });
     }
 }
 
