@@ -1,0 +1,23 @@
+{
+  "name": "fortivex",
+  "version": "1.0.0",
+  "description": "FORTIVEX — Production-Ready Online Multiplayer Strategy Game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/engine.test.js && node tests/backend.test.js && node tests/ai_benchmark.test.js"
+  },
+  "keywords": [
+    "strategy",
+    "quoridor",
+    "barricade",
+    "multiplayer",
+    "game",
+    "boardgame"
+  ],
+  "author": "FORTIVEX Team",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

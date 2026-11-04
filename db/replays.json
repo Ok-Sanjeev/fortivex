@@ -1,0 +1,74 @@
+{
+  "match_1793803080619_yasetf": {
+    "matchId": "match_1793803080619_yasetf",
+    "initialState": {
+      "mode": "classic",
+      "walls": 10
+    },
+    "moves": [
+      {
+        "player": 1,
+        "move": {
+          "type": "move",
+          "x": 4,
+          "y": 7
+        }
+      }
+    ],
+    "history": []
+  },
+  "match_1793803666233_ktb0is": {
+    "matchId": "match_1793803666233_ktb0is",
+    "initialState": {
+      "mode": "classic",
+      "walls": 10
+    },
+    "moves": [
+      {
+        "player": 1,
+        "move": {
+          "type": "move",
+          "x": 4,
+          "y": 7
+        }
+      }
+    ],
+    "history": []
+  },
+  "match_1793803691507_ogwpw0": {
+    "matchId": "match_1793803691507_ogwpw0",
+    "initialState": {
+      "mode": "classic",
+      "walls": 10
+    },
+    "moves": [
+      {
+        "player": 1,
+        "move": {
+          "type": "move",
+          "x": 4,
+          "y": 7
+        }
+      }
+    ],
+    "history": []
+  },
+  "match_1793803760701_disksy": {
+    "matchId": "match_1793803760701_disksy",
+    "initialState": {
+      "mode": "classic",
+      "walls": 10
+    },
+    "moves": [
+      {
+        "player": 1,
+        "move": {
+          "type": "move",
+          "x": 4,
+          "y": 7
+        }
+      }
+    ],
+    "history": []
+  }
+}

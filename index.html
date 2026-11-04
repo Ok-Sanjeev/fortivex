@@ -58,7 +58,7 @@
                     <div id="p1-chat-bubble" class="chat-speech-bubble" style="display: none;">Good luck!</div>
                     <div class="player-box-top">
                         <div id="p1-name-wrapper" class="player-name-wrapper" title="Tap to change name">
-                            <span id="p1-name-label" class="player-box-name">user_098765</span>
+                            <span id="p1-name-label" class="player-box-name">noob10001</span>
                             <span id="p1-elo-tag" class="player-box-elo">(1385)</span>
                             <span id="p1-country-tag" class="player-country-tag">IN</span>
                         </div>
@@ -430,7 +430,7 @@
                 </div>
 
                 <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">
-                    New players are assigned a default handle like <code style="color:var(--amber-gold);">user_098765</code>. Sign in to choose your permanent, unique display name for online and ranked matches!
+                    New players are assigned a default handle like <code style="color:var(--amber-gold);">noob10001</code>. Sign in to choose your permanent, unique display name for online and ranked matches!
                 </p>
 
                 <div style="margin-bottom: 16px;">
@@ -562,12 +562,12 @@
                 <h2 id="gameover-winner-title" style="font-size: 1.6rem; font-weight: 900; margin-bottom: 4px;">Victory!</h2>
                 <p id="gameover-reason-sub" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Reached the goal line</p>
 
-                <div id="gameover-rating-change" class="gameover-rating-change rating-win">+16</div>
+                <div id="gameover-rating-change" class="gameover-rating-change rating-win">+30</div>
                 <p style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 20px;">Ranked Match Rating</p>
 
                 <div style="display: flex; gap: 10px;">
-                    <button class="btn-create-game-action close-modal-trigger" onclick="window.barricadeApp.startNewMatch();" style="flex:1;">Rematch</button>
-                    <button class="btn-create-game-action close-modal-trigger" onclick="window.barricadeApp.switchView('home');" style="flex:1; background:#334155;">Lobby</button>
+                    <button class="btn-create-game-action close-modal-trigger" onclick="(window.fortivexApp || window.barricadeApp).startNewMatch();" style="flex:1;">Rematch</button>
+                    <button class="btn-create-game-action close-modal-trigger" onclick="(window.fortivexApp || window.barricadeApp).switchView('home');" style="flex:1; background:#334155;">Lobby</button>
                 </div>
             </div>
         </div>

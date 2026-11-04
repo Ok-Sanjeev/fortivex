@@ -58,6 +58,7 @@ class BarricadeUI {
     }
 
     initUserAccount() {
+        this.userId = localStorage.getItem('fortivex_user_id') || localStorage.getItem('barricade_user_id');
         let storedUser = localStorage.getItem('fortivex_username') || localStorage.getItem('barricade_username');
         let storedSignedIn = (localStorage.getItem('fortivex_signed_in') || localStorage.getItem('barricade_signed_in')) === 'true';
 
@@ -73,7 +74,7 @@ class BarricadeUI {
         }
 
         this.username = storedUser;
-        this.userRating = parseInt(localStorage.getItem('fortivex_elo') || localStorage.getItem('barricade_elo') || '1385', 10);
+        this.userRating = parseInt(localStorage.getItem('fortivex_elo') || localStorage.getItem('barricade_elo') || '1200', 10);
 
         // Individual streak tracked per user: defaults to 0 for users unless accumulated
         const streakKey = `fortivex_streak_${this.username}`;
@@ -88,9 +89,117 @@ class BarricadeUI {
         this.activeRoomCode = null;
         this.myPlayerRole = 1; // 1 = Blue/Host, 2 = Red/Guest
         this.opponentName = null;
-        this.opponentRating = 1385;
+        this.opponentRating = 1200;
         this.roomPollInterval = null;
         this.lastSyncedMoveIndex = 0;
+        this.ws = null;
+
+        // Register or sync with centralized server
+        if (!this.userId) {
+            fetch('/api/auth/guest', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.user) {
+                        this.userId = data.user.id;
+                        this.username = data.user.username;
+                        this.userRating = data.user.rating || 1200;
+                        this.userStreak = data.user.streak || 0;
+                        localStorage.setItem('fortivex_user_id', this.userId);
+                        localStorage.setItem('fortivex_username', this.username);
+                        localStorage.setItem('fortivex_elo', this.userRating);
+                        this.render();
+                    }
+                })
+                .catch(() => {});
+        } else {
+            fetch(`/api/user/profile?userId=${this.userId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.user) {
+                        this.username = data.user.username;
+                        this.userRating = data.user.rating;
+                        this.userStreak = data.user.streak;
+                        this.isSignedIn = !data.user.isGuest;
+                        localStorage.setItem('fortivex_username', this.username);
+                        localStorage.setItem('fortivex_elo', this.userRating);
+                        this.render();
+                    }
+                })
+                .catch(() => {});
+        }
+
+        // Initialize Real-time WebSockets
+        this.initWebSocket();
+    }
+
+    initWebSocket() {
+        if (typeof WebSocket === 'undefined') return;
+        if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
+
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}`;
+
+        try {
+            this.ws = new WebSocket(wsUrl);
+
+            this.ws.onopen = () => {
+                console.log('⚡ Connected to FORTIVEX Real-Time WebSocket Server');
+                if (this.playType === 'online_pvp' && this.activeRoomCode) {
+                    this.ws.send(JSON.stringify({
+                        type: 'join_room',
+                        code: this.activeRoomCode,
+                        role: this.myPlayerRole,
+                        username: this.username,
+                        clientId: this.clientId
+                    }));
+                }
+            };
+
+            this.ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleWebSocketMessage(data);
+                } catch (e) {
+                    console.error('Error parsing WS message:', e);
+                }
+            };
+
+            this.ws.onclose = () => {
+                setTimeout(() => this.initWebSocket(), 3000);
+            };
+        } catch (e) {
+            console.warn('WebSocket init fallback to polling:', e);
+        }
+    }
+
+    handleWebSocketMessage(data) {
+        if (!data) return;
+
+        if (data.type === 'move_broadcast') {
+            if (data.player !== this.myPlayerRole) {
+                this.applyRemoteMove(data.move);
+            }
+            if (data.winner) {
+                this.handleMatchEnd(data.winner, data.winReason);
+            }
+        } else if (data.type === 'chat_broadcast') {
+            this.showChatBubble(data.role || 2, data.text);
+        } else if (data.type === 'player_joined') {
+            if (this.roomLobbyOverlay && this.roomLobbyOverlay.style.display !== 'none') {
+                this.roomLobbyOverlay.style.display = 'none';
+                sounds.playTurnStart();
+                this.showToast(`Opponent ${data.username} joined!`);
+                this.playType = 'online_pvp';
+                this.opponentName = data.username;
+                this.startNewMatch({
+                    mode: this.selectedRoomMode || 'classic',
+                    initialWalls: this.selectedRoomWalls || 10,
+                    timeSec: this.selectedRoomTime || 180
+                });
+            }
+        }
     }
 
     initDom() {
@@ -399,7 +508,15 @@ class BarricadeUI {
             btn.addEventListener('click', () => {
                 const text = btn.textContent;
                 this.chatSheet.classList.remove('open');
-                this.showChatBubble(1, text);
+                this.showChatBubble(this.myPlayerRole || 1, text);
+
+                if (this.playType === 'online_pvp' && this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({
+                        type: 'chat',
+                        code: this.activeRoomCode,
+                        text: text
+                    }));
+                }
 
                 if (this.playType === 'pve') {
                     setTimeout(() => {
@@ -578,23 +695,31 @@ class BarricadeUI {
     }
 
     handleRankedMatchFound(data) {
-        document.getElementById('matchmaking-title').textContent = 'Real Opponent Matched!';
+        document.getElementById('matchmaking-title').textContent = data.opponent.isBot ? 'Bot Opponent Assigned!' : 'Real Opponent Matched!';
         document.getElementById('matchmaking-status').textContent = `${data.opponent.username} (${data.opponent.rating} ELO)`;
         sounds.playVictory();
         this.vibrate([30, 30, 50]);
 
         setTimeout(() => {
             this.matchmakingOverlay.style.display = 'none';
-            this.playType = 'online_pvp';
-            this.isRanked = true;
             this.activeRoomCode = data.roomCode;
-            this.myPlayerRole = data.role; // 1 = Blue, 2 = Red
+            this.myPlayerRole = data.role || 1; // 1 = Blue, 2 = Red
             this.opponentName = data.opponent.username;
             this.opponentRating = data.opponent.rating;
+            this.isRanked = true;
             this.lastSyncedMoveIndex = 0;
 
+            if (data.opponent.isBot) {
+                this.playType = 'pve';
+                this.ai.setDifficulty(data.opponent.difficulty || 'hard');
+            } else {
+                this.playType = 'online_pvp';
+            }
+
             this.startNewMatch({ mode: 'classic', initialWalls: 10, timeSec: 180 });
-            this.startOnlineMovePolling();
+            if (this.playType === 'online_pvp') {
+                this.startOnlineMovePolling();
+            }
             this.showToast(`Ranked Match vs ${this.opponentName}!`);
         }, 800);
     }
@@ -611,12 +736,12 @@ class BarricadeUI {
         this.matchmakingOverlay.style.display = 'none';
         this.isRanked = true;
         this.playType = 'pve';
-        this.opponentName = 'Grandmaster Bot';
-        this.opponentRating = Math.max(100, this.userRating + 25);
-        this.ai.setDifficulty('hard'); // Hard/Challenging for ranked fallback
+        this.opponentName = 'noob10088 [Apex Bot]';
+        this.opponentRating = Math.max(100, this.userRating + 30);
+        this.ai.setDifficulty('hard');
 
         this.startNewMatch({ mode: 'classic', initialWalls: 10, timeSec: 180 });
-        this.showToast('Ranked Match vs Challenging Bot');
+        this.showToast(`Ranked Match vs ${this.opponentName}`);
     }
 
     cancelRankedMatchmaking() {
@@ -838,7 +963,8 @@ class BarricadeUI {
             if (res.success) {
                 sounds.playIllegal();
                 this.vibrate([40, 40, 60]);
-                this.showToast("💥 Opponent smashed a barricade (-5 walls)!");
+                const cost = this.game.breakCost || 5;
+                this.showToast(`💥 Opponent smashed a barricade (-${cost} walls)!`);
             }
         }
         this.render();
@@ -846,6 +972,18 @@ class BarricadeUI {
 
     broadcastLocalMove(move) {
         if (this.playType !== 'online_pvp' || !this.activeRoomCode) return;
+
+        // 1. Instant WebSocket broadcast
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'make_move',
+                code: this.activeRoomCode,
+                player: this.myPlayerRole,
+                move: move
+            }));
+        }
+
+        // 2. HTTP POST fallback guarantee
         fetch('/api/rooms/move', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -958,37 +1096,44 @@ class BarricadeUI {
             return;
         }
 
-        const reservedNames = ['anon-1646', 'admin', 'bot', 'computer', 'system', 'barricade'];
-        if (reservedNames.includes(rawName.toLowerCase())) {
-            this.showToast('This username is reserved. Try another!');
-            return;
-        }
+        // Verify and claim username atomically via server
+        fetch('/api/auth/custom-name', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: this.userId, username: rawName })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.user) {
+                this.username = data.user.username;
+                this.isSignedIn = true;
+                localStorage.setItem('fortivex_username', this.username);
+                localStorage.setItem('fortivex_signed_in', 'true');
 
-        const existingUsers = JSON.parse(localStorage.getItem('barricade_registered_users') || '[]');
-        if (existingUsers.includes(rawName.toLowerCase()) && rawName.toLowerCase() !== this.username.toLowerCase()) {
-            this.showToast('Username already taken by another player!');
-            return;
-        }
+                const streakKey = `fortivex_streak_${this.username}`;
+                this.userStreak = data.user.streak || 0;
+                localStorage.setItem(streakKey, this.userStreak);
 
-        existingUsers.push(rawName.toLowerCase());
-        localStorage.setItem('barricade_registered_users', JSON.stringify(existingUsers));
-
-        this.username = rawName;
-        this.isSignedIn = true;
-        localStorage.setItem('barricade_username', this.username);
-        localStorage.setItem('barricade_signed_in', 'true');
-
-        // Load or initialize streak for this unique username
-        const streakKey = `barricade_streak_${this.username}`;
-        const storedStreak = localStorage.getItem(streakKey);
-        this.userStreak = storedStreak !== null ? parseInt(storedStreak, 10) : 0;
-        localStorage.setItem(streakKey, this.userStreak);
-
-        this.signInSheet.classList.remove('open');
-        this.showToast(`Signed in as ${this.username}!`);
-        sounds.playVictory();
-        this.vibrate([20, 20]);
-        this.render();
+                this.signInSheet.classList.remove('open');
+                this.showToast(`Signed in as ${this.username}!`);
+                sounds.playVictory();
+                this.vibrate([20, 20]);
+                this.render();
+            } else {
+                this.showToast(data.reason || 'Username already taken by another player!');
+                sounds.playIllegal();
+            }
+        })
+        .catch(() => {
+            // Local fallback
+            this.username = rawName;
+            this.isSignedIn = true;
+            localStorage.setItem('fortivex_username', this.username);
+            localStorage.setItem('fortivex_signed_in', 'true');
+            this.signInSheet.classList.remove('open');
+            this.showToast(`Signed in as ${this.username}!`);
+            this.render();
+        });
     }
 
     // ==========================================
@@ -1532,7 +1677,7 @@ class BarricadeUI {
     handleMatchEnd(winner, reason) {
         sounds.playVictory();
         const isWin = (winner === this.myPlayerRole);
-        const delta = isWin ? 16 : -14;
+        const delta = isWin ? 30 : -30;
 
         if (this.isRanked) {
             this.userRating = Math.max(100, this.userRating + delta);
@@ -1542,8 +1687,8 @@ class BarricadeUI {
                 this.userStreak = 0; // Personal streak resets on ranked loss
             }
 
-            localStorage.setItem('barricade_elo', this.userRating);
-            localStorage.setItem(`barricade_streak_${this.username}`, this.userStreak);
+            localStorage.setItem('fortivex_elo', this.userRating);
+            localStorage.setItem(`fortivex_streak_${this.username}`, this.userStreak);
         }
 
         // Open Game Over Sheet
@@ -1960,6 +2105,7 @@ class BarricadeUI {
 // Start app
 document.addEventListener('DOMContentLoaded', () => {
     window.barricadeApp = new BarricadeUI();
+    window.fortivexApp = window.barricadeApp;
 
     // Casual Create Game Pills
     document.querySelectorAll('.sheet-mode-box').forEach(b => {
