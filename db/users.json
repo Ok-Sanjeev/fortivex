@@ -1309,19 +1309,19 @@
     "idNum": 10050,
     "username": "noob10050",
     "displayName": "noob10050",
-    "rating": 1404,
+    "rating": 1344,
     "difficulty": "medium",
     "playstyle": "Barricade specialist",
     "streak": 0,
     "maxStreak": 7,
     "wins": 24,
-    "losses": 20,
+    "losses": 22,
     "draws": 0,
-    "matchesPlayed": 44,
+    "matchesPlayed": 46,
     "isBot": true,
     "status": "available",
     "createdAt": 1789399351525,
-    "lastActive": 1793809600863,
+    "lastActive": 1793883055935,
     "matchHistory": []
   },
   "ai_10051": {
@@ -1909,19 +1909,19 @@
     "idNum": 10080,
     "username": "noob10080",
     "displayName": "noob10080",
-    "rating": 1964,
+    "rating": 2024,
     "difficulty": "hard",
     "playstyle": "High-risk",
-    "streak": 3,
+    "streak": 5,
     "maxStreak": 7,
-    "wins": 26,
+    "wins": 28,
     "losses": 18,
     "draws": 0,
-    "matchesPlayed": 44,
+    "matchesPlayed": 46,
     "isBot": true,
     "status": "available",
     "createdAt": 1791991351526,
-    "lastActive": 1793809600873,
+    "lastActive": 1793883055950,
     "matchHistory": []
   },
   "ai_10081": {
@@ -2982,6 +2982,452 @@
         "email": "vex@google.com",
         "name": "Alex Vex",
         "linkedAt": 1793809600847
+      }
+    }
+  },
+  "usr_10135_omrmt9": {
+    "id": "usr_10135_omrmt9",
+    "idNum": 10135,
+    "username": "Apex_50352",
+    "displayName": "Apex_50352",
+    "avatar": "💎",
+    "rating": 1230,
+    "peakRating": 1230,
+    "streak": 1,
+    "maxStreak": 1,
+    "currentLosingStreak": 0,
+    "wins": 1,
+    "losses": 0,
+    "draws": 0,
+    "matchesPlayed": 1,
+    "rankedPlayed": 1,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 60,
+    "wallsPlacedTotal": 8,
+    "wallsBrokenTotal": 2,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793882990922,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793882990947,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793882990943_aei93a"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793882990947
+      }
+    },
+    "isGuest": false,
+    "isBot": false,
+    "createdAt": 1793882990922,
+    "lastActive": 1793882990943,
+    "social": {
+      "google": {
+        "providerId": "g_987654321",
+        "email": "apex@gmail.com",
+        "name": "ApexVex",
+        "linkedAt": 1793882990957
+      }
+    }
+  },
+  "usr_10136_f194hb": {
+    "id": "usr_10136_f194hb",
+    "idNum": 10136,
+    "username": "noob10136",
+    "displayName": "noob10136",
+    "avatar": "💎",
+    "rating": 1200,
+    "peakRating": 1200,
+    "streak": 0,
+    "maxStreak": 0,
+    "currentLosingStreak": 0,
+    "wins": 0,
+    "losses": 0,
+    "draws": 0,
+    "matchesPlayed": 0,
+    "rankedPlayed": 0,
+    "casualPlayed": 0,
+    "aiDefeated": 0,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 0,
+    "wallsPlacedTotal": 0,
+    "wallsBrokenTotal": 0,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793882990930,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      }
+    ],
+    "achievements": {},
+    "isGuest": true,
+    "isBot": false,
+    "createdAt": 1793882990930,
+    "lastActive": 1793882990930
+  },
+  "usr_10137_lker4y": {
+    "id": "usr_10137_lker4y",
+    "idNum": 10137,
+    "username": "noob10137",
+    "displayName": "noob10137",
+    "avatar": "💎",
+    "rating": 1200,
+    "peakRating": 1230,
+    "streak": 0,
+    "maxStreak": 1,
+    "currentLosingStreak": 1,
+    "wins": 1,
+    "losses": 1,
+    "draws": 0,
+    "matchesPlayed": 2,
+    "rankedPlayed": 2,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 120,
+    "wallsPlacedTotal": 8,
+    "wallsBrokenTotal": 2,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793882990970,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793882990979,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793882990975_y35of6"
+      },
+      {
+        "timestamp": 1793882990992,
+        "rating": 1200,
+        "delta": -30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793882990989_eplsca"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793882990979
+      }
+    },
+    "isGuest": true,
+    "isBot": false,
+    "createdAt": 1793882990970,
+    "lastActive": 1793882990989
+  },
+  "usr_10138_r1mwo7": {
+    "id": "usr_10138_r1mwo7",
+    "idNum": 10138,
+    "username": "Vex_6366",
+    "displayName": "Vex_6366",
+    "avatar": "👑",
+    "rating": 1200,
+    "peakRating": 1230,
+    "streak": 0,
+    "maxStreak": 1,
+    "currentLosingStreak": 1,
+    "wins": 1,
+    "losses": 1,
+    "draws": 0,
+    "matchesPlayed": 2,
+    "rankedPlayed": 2,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 205,
+    "wallsPlacedTotal": 4,
+    "wallsBrokenTotal": 1,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793882991169,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793882991212,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "noob10050",
+        "opponentRating": 1560,
+        "matchId": "match_1793882991204_sr4i6r"
+      },
+      {
+        "timestamp": 1793882991233,
+        "rating": 1200,
+        "delta": -30,
+        "opponent": "noob10080",
+        "opponentRating": 1950,
+        "matchId": "match_1793882991229_6ki577"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793882991212
+      }
+    },
+    "isGuest": false,
+    "isBot": false,
+    "createdAt": 1793882991169,
+    "lastActive": 1793882991229,
+    "social": {
+      "google": {
+        "providerId": "g_sub_999888",
+        "email": "vex@google.com",
+        "name": "Alex Vex",
+        "linkedAt": 1793882991197
+      }
+    }
+  },
+  "usr_10139_k9rjdi": {
+    "id": "usr_10139_k9rjdi",
+    "idNum": 10139,
+    "username": "Apex_91300",
+    "displayName": "Apex_91300",
+    "avatar": "💎",
+    "rating": 1230,
+    "peakRating": 1230,
+    "streak": 1,
+    "maxStreak": 1,
+    "currentLosingStreak": 0,
+    "wins": 1,
+    "losses": 0,
+    "draws": 0,
+    "matchesPlayed": 1,
+    "rankedPlayed": 1,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 60,
+    "wallsPlacedTotal": 8,
+    "wallsBrokenTotal": 2,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793883044294,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793883044322,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793883044317_5fy39s"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793883044322
+      }
+    },
+    "isGuest": false,
+    "isBot": false,
+    "createdAt": 1793883044294,
+    "lastActive": 1793883044317,
+    "social": {
+      "google": {
+        "providerId": "g_987654321",
+        "email": "apex@gmail.com",
+        "name": "ApexVex",
+        "linkedAt": 1793883044336
+      }
+    }
+  },
+  "usr_10140_i4ditj": {
+    "id": "usr_10140_i4ditj",
+    "idNum": 10140,
+    "username": "noob10140",
+    "displayName": "noob10140",
+    "avatar": "💎",
+    "rating": 1200,
+    "peakRating": 1200,
+    "streak": 0,
+    "maxStreak": 0,
+    "currentLosingStreak": 0,
+    "wins": 0,
+    "losses": 0,
+    "draws": 0,
+    "matchesPlayed": 0,
+    "rankedPlayed": 0,
+    "casualPlayed": 0,
+    "aiDefeated": 0,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 0,
+    "wallsPlacedTotal": 0,
+    "wallsBrokenTotal": 0,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793883044303,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      }
+    ],
+    "achievements": {},
+    "isGuest": true,
+    "isBot": false,
+    "createdAt": 1793883044303,
+    "lastActive": 1793883044303
+  },
+  "usr_10141_s5tq7i": {
+    "id": "usr_10141_s5tq7i",
+    "idNum": 10141,
+    "username": "noob10141",
+    "displayName": "noob10141",
+    "avatar": "💎",
+    "rating": 1200,
+    "peakRating": 1230,
+    "streak": 0,
+    "maxStreak": 1,
+    "currentLosingStreak": 1,
+    "wins": 1,
+    "losses": 1,
+    "draws": 0,
+    "matchesPlayed": 2,
+    "rankedPlayed": 2,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 120,
+    "wallsPlacedTotal": 8,
+    "wallsBrokenTotal": 2,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793883044355,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793883044367,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793883044361_e7u5zs"
+      },
+      {
+        "timestamp": 1793883044386,
+        "rating": 1200,
+        "delta": -30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793883044382_qfynbn"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793883044367
+      }
+    },
+    "isGuest": true,
+    "isBot": false,
+    "createdAt": 1793883044355,
+    "lastActive": 1793883044382
+  },
+  "usr_10142_knd7ca": {
+    "id": "usr_10142_knd7ca",
+    "idNum": 10142,
+    "username": "Vex_2906",
+    "displayName": "Vex_2906",
+    "avatar": "👑",
+    "rating": 1200,
+    "peakRating": 1230,
+    "streak": 0,
+    "maxStreak": 1,
+    "currentLosingStreak": 1,
+    "wins": 1,
+    "losses": 1,
+    "draws": 0,
+    "matchesPlayed": 2,
+    "rankedPlayed": 2,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 205,
+    "wallsPlacedTotal": 4,
+    "wallsBrokenTotal": 1,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793883055892,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793883055929,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "noob10050",
+        "opponentRating": 1560,
+        "matchId": "match_1793883055921_txvxny"
+      },
+      {
+        "timestamp": 1793883055950,
+        "rating": 1200,
+        "delta": -30,
+        "opponent": "noob10080",
+        "opponentRating": 1950,
+        "matchId": "match_1793883055946_mwwvnd"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793883055929
+      }
+    },
+    "isGuest": false,
+    "isBot": false,
+    "createdAt": 1793883055892,
+    "lastActive": 1793883055946,
+    "social": {
+      "google": {
+        "providerId": "g_sub_999888",
+        "email": "vex@google.com",
+        "name": "Alex Vex",
+        "linkedAt": 1793883055916
       }
     }
   }
