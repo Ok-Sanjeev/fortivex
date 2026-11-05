@@ -1,7 +1,33 @@
 const assert = require('assert');
 const db = require('../db');
+const { FORTIVEX_RANKS, getRankBadgeSvg, getRankForRating } = require('../ranks');
 
 console.log('--- RUNNING FORTIVEX PROFILE & STATISTICS VERIFICATION TESTS ---');
+
+// 0. Verify Centralized 9 Competitive Ranks
+assert.strictEqual(FORTIVEX_RANKS.length, 9, 'Must have exactly 9 competitive ranks');
+assert.strictEqual(FORTIVEX_RANKS[0].id, 'grandmaster', 'Highest tier should be Grandmaster');
+assert.strictEqual(FORTIVEX_RANKS[0].min, 2400, 'Grandmaster min threshold should be 2400');
+assert.strictEqual(FORTIVEX_RANKS[8].id, 'iron', 'Lowest tier should be Iron');
+assert.strictEqual(FORTIVEX_RANKS[8].min, 0, 'Iron min threshold should be 0');
+
+// Test Silver threshold calculation (like in screenshot: 1385 rating -> Silver, 15 to Gold)
+const rankCalc1385 = getRankForRating(1385);
+assert.strictEqual(rankCalc1385.id, 'silver', '1385 should be Silver');
+assert.strictEqual(rankCalc1385.pointsToNext, 15, '1385 should be 15 to Gold');
+assert.strictEqual(rankCalc1385.nextRank, 'Gold', 'Next rank should be Gold');
+assert(rankCalc1385.progressPercent > 90, 'Progress percent should be > 90%');
+
+// Test default starting rank (1200)
+const defaultRank = getRankForRating(1200);
+assert.strictEqual(defaultRank.id, 'silver', 'New player at 1200 must start in Silver');
+assert.strictEqual(defaultRank.pointsToNext, 200, 'Starting at 1200 should be 200 to Gold');
+assert.strictEqual(defaultRank.progressPercent, 0, 'Starting at 1200 should have 0% progress to Gold');
+
+// Verify SVG badge generation
+const svgTest = getRankBadgeSvg('silver', 48);
+assert(svgTest.includes('<svg') && svgTest.includes('</svg>'), 'Rank badge must generate valid SVG vector markup');
+console.log('✓ Verified 9 Competitive Ranks and progression calculations');
 
 // 1. Create or retrieve test user
 const user = db.createGuestUser();
@@ -17,6 +43,11 @@ assert.strictEqual(profile.id, permanentId, 'Profile ID must match permanent use
 assert.strictEqual(profile.avatar, '💎', 'Default avatar should be 💎');
 assert.strictEqual(profile.rating, 1200, 'Starting rating should be 1200');
 assert.strictEqual(profile.rankTier.name, 'Silver', '1200 rating should map to Silver tier');
+assert.strictEqual(profile.country, 'India', 'Default country should be India');
+assert(profile.recordSummary, 'recordSummary must be present');
+assert(profile.recordSummary.all1v1, 'all1v1 must be in recordSummary');
+assert(profile.recordSummary.ranked, 'ranked must be in recordSummary');
+assert(Array.isArray(profile.recentForm), 'recentForm must be an array');
 
 // Verify 10 Main Stats
 const m = profile.mainStats;

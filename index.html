@@ -8,20 +8,18 @@
     <meta name="theme-color" content="#121214">
     <title>FORTIVEX — Online Strategy Board Game</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=2.2.0">
+    <link rel="stylesheet" href="styles.css?v=3.0.0">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='5' fill='%23f59e0b'/><path d='M6 6h12v4H6zm0 8h12v4H6z' fill='%23121214'/></svg>">
     <script>
         // Force purge old legacy cache and reset old user_XXXX handles
         if ('caches' in window) {
             caches.keys().then(names => {
-                names.forEach(name => {
-                    if (name.includes('barricade') || !name.includes('v2.2.0')) caches.delete(name);
-                });
+                names.forEach(name => caches.delete(name));
             });
         }
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(regs => {
-                regs.forEach(r => r.update());
+                regs.forEach(r => r.unregister());
             });
         }
         const oldHandle = localStorage.getItem('barricade_username') || localStorage.getItem('fortivex_username');
@@ -42,7 +40,7 @@
         <!-- ========================================================
              1. IN-GAME VIEW (Screenshots 2 & 3)
              ======================================================== -->
-        <div id="game-screen-view" class="game-screen-view">
+        <div id="game-screen-view" class="game-screen-view" style="display: none;">
 
             <!-- Top Nav Bar -->
             <div class="game-top-nav">
@@ -198,13 +196,14 @@
         <!-- ========================================================
              2. HOME LOBBY SCREEN (Matches Screenshot 4)
              ======================================================== -->
-        <div id="home-screen-view" class="home-screen-view" style="display: none;">
+        <div id="home-screen-view" class="home-screen-view">
             <!-- Home Header -->
             <div class="home-top-bar">
                 <div class="home-logo-title">FORTIVEX</div>
                 <div class="home-user-badges">
                     <div id="home-user-badge" class="home-badge" title="View Player Profile & Career Stats" style="cursor: pointer;">
                         <span class="badge-icon" id="home-user-avatar">💎</span>
+                        <span id="home-rank-badge-icon" class="home-rank-badge-svg" title="Competitive Rank (Click to view tiers)"></span>
                         <span id="home-username-text">noob10116</span>
                         <span id="home-elo-badge" class="home-elo-chip">1200</span>
                     </div>
@@ -216,49 +215,96 @@
                 </div>
             </div>
 
-            <!-- Big Green "Play Ranked" Hero Button -->
-            <button id="btn-play-ranked" class="btn-play-ranked" title="Online Competitive Ranked Matchmaking">
-                <div class="btn-ranked-title">
-                    <span>▶ Play Ranked (Online)</span>
+            <!-- Ranked Matchmaking Hero Container with Mode Selector Pills -->
+            <div class="ranked-hero-container">
+                <div class="ranked-mode-pills-row">
+                    <button class="ranked-mode-pill active" data-mode="classic" data-gameplay="normal" data-cost="0">
+                        <span class="pill-emoji">🧱</span> Classic Normal
+                    </button>
+                    <button class="ranked-mode-pill" data-mode="classic" data-gameplay="breaking" data-cost="5">
+                        <span class="pill-emoji">💥</span> Breaking (1v1)
+                    </button>
+                    <button class="ranked-mode-pill" data-mode="koth" data-gameplay="breaking" data-cost="5">
+                        <span class="pill-emoji">👑</span> King of Hill (4P)
+                    </button>
                 </div>
-                <div class="btn-ranked-sub">Live 1v1 online matchmaking by rating</div>
-            </button>
+                <button id="btn-play-ranked" class="btn-play-ranked" title="Online Competitive Ranked Matchmaking">
+                    <div class="btn-ranked-title">
+                        <span>▶ Play Ranked</span>
+                    </div>
+                    <div id="btn-ranked-sub-text" class="btn-ranked-sub">Live online 1v1 matchmaking · Classic Normal (10 Walls)</div>
+                </button>
+            </div>
 
-            <!-- 1. MAIN GAME MODES (Play Bot, King of the Hill, Puzzles, Local, Watch) -->
+            <!-- SEPARATE GAME MODES -->
             <div class="front-modes-section">
-                <div class="front-section-header">GAME MODES</div>
-                <div class="home-modes-container">
-                    <!-- Row 1: Play Bot & King of the Hill (4 Players Center Race) -->
-                    <div class="home-modes-row-top">
-                        <div id="btn-play-bot" class="btn-mode-card card-play-bot" title="Play against challenging AI with 4 difficulty levels">
-                            <span style="font-size: 1.5rem;">🤖</span>
-                            <span style="font-weight: 800; font-size: 0.95rem;">Play Bot</span>
-                            <span style="font-size: 0.68rem; color: #60a5fa;">Easy · Med · Hard · Apex</span>
-                        </div>
+                <div class="front-section-header">FEATURED MODES</div>
+                
+                <!-- Spotlight 1: Barricade Breaking Mode -->
+                <div class="mode-spotlight-card card-breaking-spotlight">
+                    <div class="spotlight-badge-row">
+                        <span class="spotlight-tag breaking-tag">💥 SIGNATURE MODE</span>
+                        <span class="spotlight-meta">Break Cost: 5 Walls</span>
+                    </div>
+                    <div class="spotlight-title-row">
+                        <div class="spotlight-title">Barricade Breaking (1v1)</div>
+                        <div class="spotlight-desc">Sacrifice 5 barricades to shatter opposing walls into walkable rubble. Dynamic tactical combat.</div>
+                    </div>
+                    <div class="spotlight-actions-row">
+                        <button id="btn-mode-breaking-ranked" class="btn-spotlight-play">
+                            <span>▶ Play Ranked</span>
+                        </button>
+                        <button id="btn-mode-breaking-bot" class="btn-spotlight-sub">
+                            <span>🤖 vs Bot</span>
+                        </button>
+                    </div>
+                </div>
 
-                        <div id="btn-koth-mode" class="btn-mode-card card-koth" title="4-Player King of the Hill Center Race">
-                            <span style="font-size: 1.5rem;">👑</span>
-                            <span style="font-weight: 800; font-size: 0.95rem;">King of Hill</span>
-                            <span style="font-size: 0.68rem; color: #f59e0b;">4-Player Center Race</span>
-                        </div>
+                <!-- Spotlight 2: 4-Player King of the Hill -->
+                <div class="mode-spotlight-card card-koth-spotlight">
+                    <div class="spotlight-badge-row">
+                        <span class="spotlight-tag koth-tag">👑 4-PLAYER RACE</span>
+                        <span class="spotlight-meta">5 Walls Each</span>
+                    </div>
+                    <div class="spotlight-title-row">
+                        <div class="spotlight-title">King of the Hill (4P)</div>
+                        <div class="spotlight-desc">4 players spawn on all 4 borders racing to conquer the center crown square at (4,4). Pure spatial mayhem.</div>
+                    </div>
+                    <div class="spotlight-actions-row">
+                        <button id="btn-mode-koth-online" class="btn-spotlight-play">
+                            <span>🌐 Play Online</span>
+                        </button>
+                        <button id="btn-mode-koth-bot" class="btn-spotlight-sub">
+                            <span>🤖 vs 3 Bots</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Additional Game Modes Subgrid -->
+                <div class="front-section-header" style="margin-top: 14px;">MORE MODES</div>
+                <div class="modes-subgrid">
+                    <div id="btn-mode-normal-card" class="mode-subcard" title="Traditional 10 unbreakable walls">
+                        <div class="subcard-icon">🧱</div>
+                        <div class="subcard-title">Classic Normal</div>
+                        <div class="subcard-desc">10 Unbreakable Walls</div>
                     </div>
 
-                    <!-- Row 2: Daily Puzzles, Pass & Play Local, Spectate Watch -->
-                    <div class="home-modes-row-bottom">
-                        <div id="btn-puzzles-mode" class="btn-mode-card card-puzzles" title="Directly Play Today's Free Daily Tactical Puzzle">
-                            <svg class="puzzle-icon" viewBox="0 0 24 24"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5s-1.12-2.5-2.5-2.5z"/></svg>
-                            <span>Puzzles</span>
-                        </div>
+                    <div id="btn-play-bot" class="mode-subcard" title="Challenge 4 AI difficulties">
+                        <div class="subcard-icon">🤖</div>
+                        <div class="subcard-title">vs Computer</div>
+                        <div class="subcard-desc">Easy · Med · Hard · Apex</div>
+                    </div>
 
-                        <div id="btn-local-play" class="btn-mode-card" title="Pass & Play on Same Device">
-                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                            <span>Pass & Play</span>
-                        </div>
+                    <div id="btn-puzzles-mode" class="mode-subcard card-puzzles" title="Solve today's tactical puzzle">
+                        <div class="subcard-icon">🧩</div>
+                        <div class="subcard-title">Daily Puzzles</div>
+                        <div class="subcard-desc">3 Daily Challenges</div>
+                    </div>
 
-                        <div id="btn-watch-mode" class="btn-mode-card" title="Spectate Matches">
-                            <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .89-2 2v12c0 1.1.89 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
-                            <span>Spectate</span>
-                        </div>
+                    <div id="btn-local-play" class="mode-subcard" title="Pass and play on this device">
+                        <div class="subcard-icon">📱</div>
+                        <div class="subcard-title">Pass & Play</div>
+                        <div class="subcard-desc">2P or 4P Local Duel</div>
                     </div>
                 </div>
             </div>
@@ -312,20 +358,15 @@
                 </div>
             </div>
 
-            <!-- 4. REAL LIVE SEPARATED PLATFORM STATISTICS -->
+            <!-- UNIFIED ONLINE STATISTICS -->
             <div class="platform-stats-footer">
                 <div class="platform-stat-item">
                     <span class="stat-indicator-dot online"></span>
-                    <span id="stat-online-humans">1 Human Online</span>
+                    <span id="stat-online-players">101 players online</span>
                 </div>
                 <span class="stat-sep">·</span>
                 <div class="platform-stat-item">
-                    <span class="stat-indicator-dot bot"></span>
-                    <span id="stat-available-ai">100 AI Available</span>
-                </div>
-                <span class="stat-sep">·</span>
-                <div class="platform-stat-item">
-                    <span id="stat-active-matches">0 Matches Active</span>
+                    <span id="stat-active-matches">0 in games</span>
                 </div>
             </div>
         </div>
@@ -351,24 +392,48 @@
             </div>
 
             <div class="profile-scroll-content">
-                <!-- Profile Header Card -->
+                <!-- Profile Header Hero Card (Matches Screenshot 3) -->
                 <div class="profile-hero-card">
                     <div class="profile-hero-main">
-                        <div class="profile-avatar-container">
-                            <div id="profile-avatar-display" class="profile-avatar-circle">💎</div>
-                            <div class="profile-status-online-dot" title="Online"></div>
+                        <!-- Clickable Rank Badge (Opens Ranks Bottom Sheet) -->
+                        <div id="profile-hero-rank-badge" class="profile-hero-badge-container" title="Click to view all Competitive Ranks">
+                            <!-- SVG injected dynamically -->
                         </div>
+                        
+                        <!-- Middle Identity Column -->
                         <div class="profile-identity-col">
-                            <div class="profile-name-row">
-                                <h2 id="profile-display-name" class="profile-username">noob10116</h2>
-                                <span id="profile-tier-badge" class="profile-rank-tier tier-silver">🥈 Silver</span>
+                            <h2 id="profile-display-name" class="profile-username">noob10116</h2>
+                            <div class="profile-joined-row">
+                                <span id="profile-joined-date">Joined Aug 27, 2026</span>
                             </div>
-                            <div id="profile-player-id" class="profile-player-id">ID: usr_10116_m0cvq4</div>
-                            <div class="profile-badges-row">
-                                <span id="profile-rating-badge" class="profile-badge-pill rating-pill">⭐ 1200 ELO</span>
-                                <span id="profile-account-type-badge" class="profile-badge-pill account-pill">👤 Guest</span>
-                                <span id="profile-member-since" class="profile-badge-pill member-pill">📅 Nov 2026</span>
+                            <div class="profile-country-row">
+                                <span id="profile-country-flag" class="country-flag-emoji">🇮🇳</span>
+                                <span id="profile-country-name" class="country-name-text">India</span>
                             </div>
+                        </div>
+
+                        <!-- Right Rating & Score Column (Screenshot 3) -->
+                        <div class="profile-hero-score-col">
+                            <div id="profile-rank-title" class="profile-rank-title-txt">SILVER</div>
+                            <div id="profile-current-rating" class="profile-current-rating-num">1200</div>
+                            <div class="profile-score-meta-row">
+                                <span id="profile-peak-rating-tag" class="score-tag peak-tag">Peak 1200</span>
+                                <span id="profile-global-rank" class="score-tag rank-tag">Rank #1</span>
+                            </div>
+                            <div id="profile-record-tag" class="profile-wl-record-tag">
+                                <span id="profile-wl-wins" class="rec-wins">0W</span> / <span id="profile-wl-losses" class="rec-losses">0L</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rank Progression Bar (Screenshot 3) -->
+                    <div class="profile-progression-wrapper">
+                        <div class="progression-label-row">
+                            <span id="profile-progression-sub" class="progression-sub-txt">200 to Gold</span>
+                            <span id="profile-progression-pct" class="progression-pct-txt">0%</span>
+                        </div>
+                        <div class="rank-progression-track">
+                            <div id="profile-progression-bar" class="rank-progression-fill" style="width: 0%;"></div>
                         </div>
                     </div>
 
@@ -390,58 +455,194 @@
                     <button class="profile-tab-item" data-tab="achievements">Badges</button>
                 </div>
 
-                <!-- Tab 1: Overview -->
+                <!-- Tab 1: Overview (Architecture from Screenshots 2 & 3) -->
                 <div id="profile-view-overview" class="profile-tab-view active">
-                    <!-- Key Highlight Cards -->
-                    <div class="profile-overview-grid">
-                        <div class="overview-metric-card">
-                            <div class="metric-icon">🏆</div>
-                            <div class="metric-val" id="ov-peak-rating">1200</div>
-                            <div class="metric-label">Peak Rating</div>
+                    <!-- 1. Record Summary Card (Matches Screenshot 2) -->
+                    <div class="profile-record-card">
+                        <div class="record-card-title">Record</div>
+                        
+                        <!-- All 1v1 split bar -->
+                        <div class="record-row-header">
+                            <span class="record-mode-label">All 1v1 · <span id="rec-all-total">0</span> games</span>
+                            <span class="record-rate-label">Win rate <span id="rec-all-rate">0.0%</span></span>
                         </div>
-                        <div class="overview-metric-card">
-                            <div class="metric-icon">🔥</div>
-                            <div class="metric-val" id="ov-curr-streak">0</div>
-                            <div class="metric-label">Win Streak</div>
+                        <div class="record-split-bar">
+                            <div id="rec-all-bar-win" class="split-bar-win" style="width: 50%;"></div>
+                            <div id="rec-all-bar-loss" class="split-bar-loss" style="width: 50%;"></div>
                         </div>
-                        <div class="overview-metric-card">
-                            <div class="metric-icon">🎯</div>
-                            <div class="metric-val" id="ov-win-rate">0%</div>
-                            <div class="metric-label">Win Rate</div>
+                        <div class="record-counts-row">
+                            <span class="record-count-item">Wins <strong id="rec-all-wins" class="stat-win-txt">0</strong></span>
+                            <span class="record-count-item">Losses <strong id="rec-all-losses" class="stat-loss-txt">0</strong></span>
                         </div>
-                        <div class="overview-metric-card">
-                            <div class="metric-icon">⚔️</div>
-                            <div class="metric-val" id="ov-total-games">0</div>
-                            <div class="metric-label">Matches</div>
+
+                        <!-- Ranked split bar -->
+                        <div class="record-row-header" style="margin-top: 14px;">
+                            <span class="record-mode-label">Ranked · <span id="rec-ranked-total">0</span> games</span>
+                            <span class="record-rate-label">Win rate <span id="rec-ranked-rate">0.0%</span></span>
+                        </div>
+                        <div class="record-split-bar">
+                            <div id="rec-ranked-bar-win" class="split-bar-win" style="width: 50%;"></div>
+                            <div id="rec-ranked-bar-loss" class="split-bar-loss" style="width: 50%;"></div>
+                        </div>
+                        <div class="record-counts-row">
+                            <span class="record-count-item">Wins <strong id="rec-ranked-wins" class="stat-win-txt">0</strong></span>
+                            <span class="record-count-item">Losses <strong id="rec-ranked-losses" class="stat-loss-txt">0</strong></span>
+                        </div>
+
+                        <!-- Recent form 10 pills -->
+                        <div class="recent-form-section">
+                            <div class="recent-form-label">Recent form</div>
+                            <div id="profile-recent-form-pills" class="recent-form-pills-row">
+                                <!-- 10 square pills dynamically rendered -->
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Recent Form / Mini Matches -->
+                    <!-- 2. Rating Progression Card (Matches Screenshot 3) -->
+                    <div class="profile-section-card rating-progression-overview-card">
+                        <div class="overview-rating-header">
+                            <div>
+                                <div class="ov-rating-title">Rating</div>
+                                <div class="ov-rating-sub">
+                                    <span id="ov-rating-net" class="stat-win-txt">+0</span> · <span id="ov-rating-games">0</span> ranked games
+                                </div>
+                            </div>
+                            <div class="ov-period-filters">
+                                <button class="ov-period-pill active" data-period="all">ALL</button>
+                                <button class="ov-period-pill" data-period="90d">90D</button>
+                                <button class="ov-period-pill" data-period="30d">30D</button>
+                                <button class="ov-period-pill" data-period="7d">7D</button>
+                            </div>
+                        </div>
+                        <div class="ov-chart-container">
+                            <svg id="ov-rating-svg" class="rating-history-svg" viewBox="0 0 380 160" preserveAspectRatio="none">
+                                <!-- Rendered dynamically -->
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- 3. Recent Matches (Matches Screenshot 2 & 3) -->
                     <div class="profile-section-card">
                         <div class="profile-card-header">
-                            <span>RECENT MATCHES</span>
-                            <button class="btn-text-action" id="btn-see-all-matches">See All →</button>
+                            <span class="ov-recent-title">RECENT GAMES</span>
+                            <span id="ov-recent-total" class="ov-recent-total-txt">0 total</span>
                         </div>
-                        <div id="profile-mini-matches-list" class="profile-mini-list">
+                        <div id="profile-overview-matches-list" class="profile-matches-list-styled">
                             <div class="profile-empty-state">No completed matches yet. Jump into Ranked to build your record!</div>
-                        </div>
-                    </div>
-
-                    <!-- Achievements Spotlight -->
-                    <div class="profile-section-card">
-                        <div class="profile-card-header">
-                            <span>TOP ACHIEVEMENTS</span>
-                            <button class="btn-text-action" id="btn-see-all-achievements">View All (11) →</button>
-                        </div>
-                        <div id="profile-mini-achievements-list" class="profile-mini-achievements-row">
-                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Tab 2: Statistics (10 Main + 9 Additional) -->
+                <!-- Tab 2: Statistics (10 Main + Categories + 9 Additional) -->
                 <div id="profile-view-stats" class="profile-tab-view">
                     <div class="profile-stats-group-label">MAIN CAREER METRICS</div>
+                    <div class="profile-stats-grid-10">
+                        <div class="stat-box">
+                            <div class="stat-number" id="stat-total-games">0</div>
+                            <div class="stat-title">Total Games</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-win" id="stat-total-wins">0</div>
+                            <div class="stat-title">Total Wins</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-loss" id="stat-total-losses">0</div>
+                            <div class="stat-title">Total Losses</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-draw" id="stat-draws">0</div>
+                            <div class="stat-title">Draws</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-rate" id="stat-win-rate">0%</div>
+                            <div class="stat-title">Win Rate</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-gold" id="stat-current-rating">1200</div>
+                            <div class="stat-title">Current Rating</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-gold" id="stat-peak-rating">1200</div>
+                            <div class="stat-title">Best Rating</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-streak" id="stat-curr-streak">0</div>
+                            <div class="stat-title">Current Streak</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-streak" id="stat-best-streak">0</div>
+                            <div class="stat-title">Best Streak</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number stat-loss" id="stat-losing-streak">0</div>
+                            <div class="stat-title">Losing Streak</div>
+                        </div>
+                    </div>
+
+                    <!-- CATEGORIES BREAKDOWN (Ranked, Casual, vs Computer, 4 Players, Breaking) -->
+                    <div class="profile-stats-group-label" style="margin-top: 20px;">GAME CATEGORIES BREAKDOWN</div>
+                    <div class="categories-breakdown-grid">
+                        <div class="category-breakdown-card">
+                            <div class="cat-card-header">
+                                <span class="cat-icon">⭐</span>
+                                <span class="cat-title">Ranked 1v1</span>
+                            </div>
+                            <div class="cat-stat-main" id="cat-ranked-record">0W - 0L</div>
+                            <div class="cat-sub-text" id="cat-ranked-rate">Win Rate: 0%</div>
+                        </div>
+
+                        <div class="category-breakdown-card">
+                            <div class="cat-card-header">
+                                <span class="cat-icon">⚔️</span>
+                                <span class="cat-title">Casual 1v1</span>
+                            </div>
+                            <div class="cat-stat-main" id="cat-casual-record">0W - 0L</div>
+                            <div class="cat-sub-text" id="cat-casual-rate">Win Rate: 0%</div>
+                        </div>
+
+                        <div class="category-breakdown-card">
+                            <div class="cat-card-header">
+                                <span class="cat-icon">👑</span>
+                                <span class="cat-title">King of the Hill (4P)</span>
+                            </div>
+                            <div class="cat-stat-main" id="cat-koth-record">0W - 0L</div>
+                            <div class="cat-sub-text" id="cat-koth-rate">Win Rate: 0%</div>
+                        </div>
+
+                        <div class="category-breakdown-card">
+                            <div class="cat-card-header">
+                                <span class="cat-icon">💥</span>
+                                <span class="cat-title">Barricade Breaking</span>
+                            </div>
+                            <div class="cat-stat-main" id="cat-breaking-record">0W - 0L</div>
+                            <div class="cat-sub-text" id="cat-breaking-rate">Cost: 5 Walls</div>
+                        </div>
+                    </div>
+
+                    <!-- Computer Difficulty Breakdown -->
+                    <div class="comp-diff-card">
+                        <div class="comp-diff-header">🤖 VS COMPUTER (BY DIFFICULTY)</div>
+                        <div class="diff-breakdown-row">
+                            <div class="diff-badge-col">
+                                <span class="diff-pill-label diff-easy">Easy</span>
+                                <span id="comp-easy-record" class="diff-record-txt">0W - 0L</span>
+                            </div>
+                            <div class="diff-badge-col">
+                                <span class="diff-pill-label diff-med">Medium</span>
+                                <span id="comp-med-record" class="diff-record-txt">0W - 0L</span>
+                            </div>
+                            <div class="diff-badge-col">
+                                <span class="diff-pill-label diff-hard">Hard</span>
+                                <span id="comp-hard-record" class="diff-record-txt">0W - 0L</span>
+                            </div>
+                            <div class="diff-badge-col">
+                                <span class="diff-pill-label diff-apex">Impossible</span>
+                                <span id="comp-apex-record" class="diff-record-txt">0W - 0L</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-stats-group-label" style="margin-top: 18px;">ADDITIONAL COMPETITIVE STATS</div>
                     <div class="profile-stats-grid-10">
                         <div class="stat-box">
                             <div class="stat-number" id="stat-total-games">0</div>
@@ -583,11 +784,13 @@
                         <!-- Match Cards -->
                     </div>
 
-                    <!-- Pagination -->
+                    <!-- Pagination (Matches Screenshot 2) -->
                     <div class="profile-pagination-bar">
-                        <button id="btn-matches-prev" class="btn-pagination-pill" disabled>← Previous</button>
+                        <button id="btn-matches-first" class="btn-pagination-pill" disabled title="First Page">|&lt;</button>
+                        <button id="btn-matches-prev" class="btn-pagination-pill" disabled title="Previous Page">&lt;</button>
                         <span id="matches-page-label" class="pagination-page-info">Page 1 of 1</span>
-                        <button id="btn-matches-next" class="btn-pagination-pill" disabled>Next →</button>
+                        <button id="btn-matches-next" class="btn-pagination-pill" disabled title="Next Page">&gt;</button>
+                        <button id="btn-matches-last" class="btn-pagination-pill" disabled title="Last Page">&gt;|</button>
                     </div>
                 </div>
 
@@ -773,11 +976,11 @@
 
                     <div class="sheet-form-label">GAMEPLAY MODE</div>
                     <div class="sheet-pills-row">
-                        <div class="sheet-choice-pill room-gameplay-pill" data-gameplay="normal">Normal (No Breaking)</div>
-                        <div class="sheet-choice-pill room-gameplay-pill selected" data-gameplay="breaking">💥 Barricade Breaking</div>
+                        <div class="sheet-choice-pill room-gameplay-pill selected" data-gameplay="normal">Normal (No Breaking)</div>
+                        <div class="sheet-choice-pill room-gameplay-pill" data-gameplay="breaking">💥 Barricade Breaking</div>
                     </div>
 
-                    <div id="room-break-cost-section" class="break-cost-options-row">
+                    <div id="room-break-cost-section" class="break-cost-options-row" style="display: none;">
                         <div class="sheet-form-label">BREAKING COST</div>
                         <div class="sheet-pills-row">
                             <div class="sheet-choice-pill room-break-cost-pill" data-cost="3">3 Barricades</div>
@@ -982,6 +1185,25 @@
                     <div id="edit-profile-name-hint" class="auth-error-hint">3-15 characters. Changing your display name preserves your permanent ID.</div>
                 </div>
 
+                <!-- 2b. Country Selection -->
+                <div class="edit-profile-section" style="margin-top: 14px;">
+                    <div class="sheet-form-label">COUNTRY / REGION</div>
+                    <select id="edit-profile-country-select" class="sheet-text-input" style="cursor: pointer;">
+                        <option value="India">🇮🇳 India</option>
+                        <option value="United States">🇺🇸 United States</option>
+                        <option value="United Kingdom">🇬🇧 United Kingdom</option>
+                        <option value="Canada">🇨🇦 Canada</option>
+                        <option value="Germany">🇩🇪 Germany</option>
+                        <option value="France">🇫🇷 France</option>
+                        <option value="Japan">🇯🇵 Japan</option>
+                        <option value="South Korea">🇰🇷 South Korea</option>
+                        <option value="Australia">🇦🇺 Australia</option>
+                        <option value="Brazil">🇧🇷 Brazil</option>
+                        <option value="Spain">🇪🇸 Spain</option>
+                        <option value="International">🌐 International</option>
+                    </select>
+                </div>
+
                 <!-- 3. Account Link / Status -->
                 <div class="edit-profile-section" style="margin-top: 14px;">
                     <div class="sheet-form-label">ACCOUNT STATUS</div>
@@ -1010,8 +1232,8 @@
                 <!-- 1. GAMEPLAY MODE (Normal vs Barricade Breaking) -->
                 <div class="sheet-form-label">1. GAMEPLAY MODE</div>
                 <div class="sheet-pills-row">
-                    <div class="sheet-choice-pill bot-gameplay-pill" data-gameplay="normal">Normal (No Breaking)</div>
-                    <div class="sheet-choice-pill bot-gameplay-pill selected" data-gameplay="breaking">💥 Barricade Breaking</div>
+                    <div class="sheet-choice-pill bot-gameplay-pill selected" data-gameplay="normal">Normal (No Breaking)</div>
+                    <div class="sheet-choice-pill bot-gameplay-pill" data-gameplay="breaking">💥 Barricade Breaking</div>
                 </div>
 
                 <!-- 2. AI DIFFICULTY (Always visible & selectable in BOTH modes!) -->
@@ -1053,7 +1275,7 @@
                 </div>
 
                 <!-- 5. BREAKING COST (Only visible when Barricade Breaking is selected) -->
-                <div id="bot-break-cost-section" class="break-cost-options-row">
+                <div id="bot-break-cost-section" class="break-cost-options-row" style="display: none;">
                     <div class="sheet-form-label">5. BREAKING COST</div>
                     <div class="sheet-pills-row">
                         <div class="sheet-choice-pill bot-break-cost-pill" data-cost="3">3 Barricades</div>
@@ -1162,6 +1384,38 @@
             </div>
         </div>
 
+        <!-- ========================================================
+             10. COMPETITIVE RANKS BOTTOM SHEET (Matches Screenshot 1)
+             ======================================================== -->
+        <div id="ranks-sheet" class="modal-bottom-sheet-overlay">
+            <div class="sheet-container-card ranks-sheet-modal">
+                <div class="sheet-handle-bar"></div>
+                <div class="sheet-header-title">
+                    <span>Ranks</span>
+                    <button id="btn-close-ranks-sheet" class="sheet-close-x close-modal-trigger">&times;</button>
+                </div>
+                <div id="ranks-tier-list" class="ranks-tier-list">
+                    <!-- Populated dynamically with all 9 tiers from ranks.js -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             11. MATCH DETAILS BOTTOM SHEET (With Move Log & Replay)
+             ======================================================== -->
+        <div id="match-details-sheet" class="modal-bottom-sheet-overlay">
+            <div class="sheet-container-card match-details-modal">
+                <div class="sheet-handle-bar"></div>
+                <div class="sheet-header-title">
+                    <span>Match Details</span>
+                    <button id="btn-close-match-details" class="sheet-close-x close-modal-trigger">&times;</button>
+                </div>
+                <div id="match-details-content" class="match-details-content">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
         <!-- Floating Touch Drag Follower for Mobile Finger Drag -->
         <div id="touch-floating-wall" class="touch-floating-wall"></div>
 
@@ -1173,9 +1427,10 @@
     </div>
 
     <!-- Scripts with Cache-Busting -->
-    <script src="audio.js?v=2.2.0"></script>
-    <script src="game.js?v=2.2.0"></script>
-    <script src="ai.js?v=2.2.0"></script>
-    <script src="ui.js?v=2.2.0"></script>
+    <script src="ranks.js?v=3.0.0"></script>
+    <script src="audio.js?v=3.0.0"></script>
+    <script src="game.js?v=3.0.0"></script>
+    <script src="ai.js?v=3.0.0"></script>
+    <script src="ui.js?v=3.0.0"></script>
 </body>
 </html>

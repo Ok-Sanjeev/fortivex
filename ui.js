@@ -54,7 +54,17 @@ class BarricadeUI {
         this.startClock();
         this.startServerHeartbeat();
         this.checkUrlForRoomInvite();
+
+        // Default Ranked Queue Mode: Classic Normal (10 Walls)
+        this.selectedRankedMode = {
+            mode: 'classic',
+            gameplayMode: 'normal',
+            breakCost: 0,
+            walls: 10
+        };
+
         this.render();
+        this.switchView('home');
     }
 
     initUserAccount() {
@@ -220,6 +230,8 @@ class BarricadeUI {
         this.gameOverSheet = document.getElementById('gameover-sheet');
         this.signInSheet = document.getElementById('signin-sheet');
         this.editProfileSheet = document.getElementById('edit-profile-sheet');
+        this.ranksSheet = document.getElementById('ranks-sheet');
+        this.matchDetailsSheet = document.getElementById('match-details-sheet');
         this.dailyCompleteSheet = document.getElementById('daily-complete-sheet');
         this.matchmakingOverlay = document.getElementById('matchmaking-overlay');
         this.roomLobbyOverlay = document.getElementById('room-lobby-overlay');
@@ -229,6 +241,11 @@ class BarricadeUI {
         this.btnOpenEditProfile = document.getElementById('btn-open-edit-profile');
         this.btnSaveProfileChanges = document.getElementById('btn-save-profile-changes');
         this.btnProfileBannerLink = document.getElementById('btn-profile-banner-link');
+        this.homeRankBadgeIcon = document.getElementById('home-rank-badge-icon');
+        this.profileHeroRankBadge = document.getElementById('profile-hero-rank-badge');
+        this.btnMatchesFirst = document.getElementById('btn-matches-first');
+        this.btnMatchesLast = document.getElementById('btn-matches-last');
+        this.editProfileCountrySelect = document.getElementById('edit-profile-country-select');
 
         // Sign In Form Elements
         this.signInInput = document.getElementById('signin-username-input');
@@ -304,10 +321,20 @@ class BarricadeUI {
         this.btnRefreshPublicRooms = document.getElementById('btn-refresh-public-rooms');
         this.activePublicFilter = 'all';
 
-        // Platform Statistics Elements
+        // Platform Statistics Elements (Unified)
+        this.statOnlinePlayers = document.getElementById('stat-online-players');
         this.statOnlineHumans = document.getElementById('stat-online-humans');
         this.statAvailableAi = document.getElementById('stat-available-ai');
         this.statActiveMatches = document.getElementById('stat-active-matches');
+
+        // Ranked Mode Selector & Featured Spotlight Mode Elements
+        this.rankedModePills = document.querySelectorAll('.ranked-mode-pill');
+        this.btnRankedSubText = document.getElementById('btn-ranked-sub-text');
+        this.btnModeBreakingRanked = document.getElementById('btn-mode-breaking-ranked');
+        this.btnModeBreakingBot = document.getElementById('btn-mode-breaking-bot');
+        this.btnModeKothOnline = document.getElementById('btn-mode-koth-online');
+        this.btnModeKothBot = document.getElementById('btn-mode-koth-bot');
+        this.btnModeNormalCard = document.getElementById('btn-mode-normal-card');
 
         // Room Creator Elements
         this.customRoomTitleInput = document.getElementById('custom-room-title-input');
@@ -366,6 +393,17 @@ class BarricadeUI {
     bindEvents() {
         // Independent Profile & Sign In Navigation
         this.homeUserBadge?.addEventListener('click', () => this.openProfileScreen());
+        this.homeRankBadgeIcon?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openRanksSheet();
+        });
+        this.profileHeroRankBadge?.addEventListener('click', () => this.openRanksSheet());
+        document.getElementById('btn-close-ranks-sheet')?.addEventListener('click', () => {
+            this.ranksSheet?.classList.remove('open');
+        });
+        document.getElementById('btn-close-match-details')?.addEventListener('click', () => {
+            this.matchDetailsSheet?.classList.remove('open');
+        });
         document.getElementById('p1-name-wrapper')?.addEventListener('click', () => this.openProfileScreen());
         this.homeSignInPrompt?.addEventListener('click', () => this.openSignInSheet());
 
@@ -392,11 +430,25 @@ class BarricadeUI {
                 const tabName = tabBtn.dataset.tab;
                 const targetView = document.getElementById(`profile-view-${tabName}`);
                 if (targetView) targetView.classList.add('active');
-                if (tabName === 'rating') {
+                if (tabName === 'overview') {
+                    if (this.currentProfileData) this.renderOverviewTab(this.currentProfileData);
+                } else if (tabName === 'stats') {
+                    if (this.currentProfileData) this.renderStatsTab(this.currentProfileData);
+                } else if (tabName === 'rating') {
                     this.renderRatingHistoryTab(this.userId, this.ratingPeriodFilter || 'all');
                 } else if (tabName === 'matches') {
                     this.renderMatchHistoryTab(this.userId, this.matchesCurrentPage || 1, this.matchesFilter || 'all');
                 }
+            });
+        });
+
+        // Overview Period Filter Pills
+        document.querySelectorAll('.ov-period-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.ov-period-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                this.ovRatingPeriod = pill.dataset.period;
+                this.renderOverviewRatingChart(this.userId, this.ovRatingPeriod);
             });
         });
 
@@ -422,6 +474,12 @@ class BarricadeUI {
         });
 
         // Match Pagination
+        document.getElementById('btn-matches-first')?.addEventListener('click', () => {
+            if (this.matchesCurrentPage > 1) {
+                this.matchesCurrentPage = 1;
+                this.renderMatchHistoryTab(this.userId, 1, this.matchesFilter || 'all');
+            }
+        });
         document.getElementById('btn-matches-prev')?.addEventListener('click', () => {
             if (this.matchesCurrentPage > 1) {
                 this.matchesCurrentPage--;
@@ -432,6 +490,12 @@ class BarricadeUI {
             if (this.matchesCurrentPage < this.matchesTotalPages) {
                 this.matchesCurrentPage++;
                 this.renderMatchHistoryTab(this.userId, this.matchesCurrentPage, this.matchesFilter || 'all');
+            }
+        });
+        document.getElementById('btn-matches-last')?.addEventListener('click', () => {
+            if (this.matchesCurrentPage < this.matchesTotalPages) {
+                this.matchesCurrentPage = this.matchesTotalPages;
+                this.renderMatchHistoryTab(this.userId, this.matchesTotalPages, this.matchesFilter || 'all');
             }
         });
 
@@ -457,9 +521,69 @@ class BarricadeUI {
             if (e.key === 'Enter') this.handleSignInSubmit();
         });
 
+        // Ranked Mode Selector Pills
+        this.rankedModePills?.forEach(pill => {
+            pill.addEventListener('click', () => {
+                this.rankedModePills.forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                const mode = pill.dataset.mode;
+                const gameplay = pill.dataset.gameplay;
+                const cost = parseInt(pill.dataset.cost || '5', 10);
+                this.selectedRankedMode = {
+                    mode,
+                    gameplayMode: gameplay,
+                    breakCost: cost,
+                    walls: (mode === 'koth') ? 5 : 10
+                };
+                if (this.btnRankedSubText) {
+                    if (mode === 'koth') {
+                        this.btnRankedSubText.textContent = 'Live online 4-player matchmaking · King of the Hill (4P)';
+                    } else if (gameplay === 'normal') {
+                        this.btnRankedSubText.textContent = 'Live online 1v1 matchmaking · Classic Normal (10 Walls)';
+                    } else {
+                        this.btnRankedSubText.textContent = 'Live online 1v1 matchmaking · Breaking Mode (Cost 5)';
+                    }
+                }
+            });
+        });
+
         // 1. Home Screen Buttons
         document.getElementById('btn-play-ranked')?.addEventListener('click', () => {
-            this.startRankedMatchmaking();
+            this.startRankedMatchmaking(this.selectedRankedMode);
+        });
+
+        // Featured Spotlight Actions
+        this.btnModeBreakingRanked?.addEventListener('click', () => {
+            this.startRankedMatchmaking({ mode: 'classic', gameplayMode: 'breaking', breakCost: 5, walls: 10 });
+        });
+
+        this.btnModeBreakingBot?.addEventListener('click', () => {
+            document.querySelectorAll('#bot-sheet .bot-gameplay-pill').forEach(b => {
+                b.classList.toggle('selected', b.dataset.gameplay === 'breaking');
+            });
+            document.querySelectorAll('#bot-sheet .bot-mode-box').forEach(b => {
+                b.classList.toggle('selected', b.dataset.mode === 'classic');
+            });
+            const costRow = document.getElementById('bot-break-cost-row');
+            if (costRow) costRow.style.display = 'flex';
+            this.botSheet?.classList.add('open');
+        });
+
+        this.btnModeKothOnline?.addEventListener('click', () => {
+            this.startRankedMatchmaking({ mode: 'koth', gameplayMode: 'breaking', breakCost: 5, walls: 5 });
+        });
+
+        this.btnModeKothBot?.addEventListener('click', () => {
+            this.isRanked = false;
+            this.playType = 'pve';
+            this.myPlayerRole = 1;
+            this.ai.setDifficulty('medium');
+            this.startNewMatch({ mode: 'koth', gameplayMode: 'breaking', breakCost: 5, initialWalls: 5, timeSec: 180 });
+            this.showToast('👑 King of the Hill: Race to capture center crown (4,4)!');
+        });
+
+        this.btnModeNormalCard?.addEventListener('click', () => {
+            this.startRankedMatchmaking({ mode: 'classic', gameplayMode: 'normal', walls: 10, breakCost: 0 });
         });
 
         // Front Page Custom Rooms: Build & Join
@@ -760,14 +884,16 @@ class BarricadeUI {
             .then(res => res.json())
             .then(data => {
                 if (data && data.success) {
-                    if (this.statOnlineHumans) {
-                        this.statOnlineHumans.textContent = `${data.humanOnlineCount || data.onlineCount || 1} Human Online`;
+                    const onlineNum = data.onlineCount || 101;
+                    const inGameNum = data.inGameCount || data.activeMatchesCount || 0;
+                    if (this.statOnlinePlayers) {
+                        this.statOnlinePlayers.textContent = `${onlineNum} players online`;
                     }
-                    if (this.statAvailableAi) {
-                        this.statAvailableAi.textContent = `${data.aiAvailableCount || 100} AI Available`;
+                    if (this.statOnlineHumans) {
+                        this.statOnlineHumans.textContent = `${onlineNum} players online`;
                     }
                     if (this.statActiveMatches) {
-                        this.statActiveMatches.textContent = `${data.activeMatchesCount || data.inGameCount || 0} Matches Active`;
+                        this.statActiveMatches.textContent = `${inGameNum} in games`;
                     }
                 }
             })
@@ -878,7 +1004,10 @@ class BarricadeUI {
     // ==========================================
     // REAL ONLINE RANKED MATCHMAKING FLOW
     // ==========================================
-    startRankedMatchmaking() {
+    startRankedMatchmaking(config = null) {
+        const modeConfig = config || this.selectedRankedMode || { mode: 'classic', gameplayMode: 'normal', breakCost: 0, walls: 10 };
+        this.selectedRankedMode = modeConfig;
+
         this.matchmakingOverlay.style.display = 'flex';
         if (this.matchmakingSearchCard) this.matchmakingSearchCard.style.display = 'block';
         if (this.matchmakingVsCard) this.matchmakingVsCard.style.display = 'none';
@@ -924,7 +1053,10 @@ class BarricadeUI {
                 clientId: this.clientId,
                 userId: this.userId,
                 username: this.username,
-                rating: this.userRating
+                rating: this.userRating,
+                mode: modeConfig.mode || 'classic',
+                gameplayMode: modeConfig.gameplayMode || 'breaking',
+                breakCost: modeConfig.breakCost || 5
             })
         })
         .then(res => res.json())
@@ -1004,7 +1136,7 @@ class BarricadeUI {
                 if (this.vsP1Rating) this.vsP1Rating.textContent = `${this.userRating} ELO`;
                 if (this.vsP2Name) this.vsP2Name.textContent = this.opponentName;
                 if (this.vsP2Rating) this.vsP2Rating.textContent = `${this.opponentRating} ELO`;
-                if (this.vsP2Badge) this.vsP2Badge.textContent = data.opponent.isBot ? 'AI OPPONENT' : 'OPPONENT';
+                if (this.vsP2Badge) this.vsP2Badge.textContent = 'OPPONENT';
             }
 
             let countdown = 2;
@@ -1018,7 +1150,14 @@ class BarricadeUI {
                     this.matchmakingOverlay.style.display = 'none';
                     if (this.matchmakingVsCard) this.matchmakingVsCard.style.display = 'none';
 
-                    this.startNewMatch({ mode: 'classic', initialWalls: 10, timeSec: 180, gameplayMode: 'breaking', breakCost: 5 });
+                    const s = data.settings || {};
+                    const mMode = s.mode || (this.selectedRankedMode && this.selectedRankedMode.mode) || 'classic';
+                    const mGameplay = s.gameplayMode || (this.selectedRankedMode && this.selectedRankedMode.gameplayMode) || 'breaking';
+                    const mBreakCost = s.breakCost || (this.selectedRankedMode && this.selectedRankedMode.breakCost) || 5;
+                    const mWalls = s.walls || (mMode === 'koth' ? 5 : 10);
+                    const mTime = s.timeSec || 180;
+
+                    this.startNewMatch({ mode: mMode, initialWalls: mWalls, timeSec: mTime, gameplayMode: mGameplay, breakCost: mBreakCost });
                     if (this.playType === 'online_pvp') {
                         this.startOnlineMovePolling();
                     }
@@ -2192,8 +2331,8 @@ class BarricadeUI {
 
     startNewMatch(opts = {}) {
         const mode = opts.mode || 'classic';
-        const gameplayMode = opts.gameplayMode || 'breaking';
-        const breakCost = opts.breakCost !== undefined ? opts.breakCost : 5;
+        const gameplayMode = opts.gameplayMode || 'normal';
+        const breakCost = (gameplayMode === 'breaking') ? (opts.breakCost !== undefined ? opts.breakCost : 5) : 0;
         const initialWalls = opts.initialWalls !== undefined ? opts.initialWalls : (mode === 'koth' ? 5 : 10);
 
         this.matchStartTime = Date.now();
@@ -2272,6 +2411,13 @@ class BarricadeUI {
             avatarEl.textContent = this.userAvatar || '💎';
         }
 
+        // Home Screen Rank Badge Vector Icon
+        const rankInfo = typeof getRankForRating === 'function' ? getRankForRating(this.userRating) : null;
+        const rankBadgeIcon = document.getElementById('home-rank-badge-icon');
+        if (rankBadgeIcon && rankInfo) {
+            rankBadgeIcon.innerHTML = typeof getRankBadgeSvg === 'function' ? getRankBadgeSvg(rankInfo.id, 20) : '';
+        }
+
         // Show Sign In CTA if user has default name
         if (this.homeSignInPrompt) {
             this.homeSignInPrompt.style.display = this.isSignedIn ? 'none' : 'inline-block';
@@ -2290,10 +2436,10 @@ class BarricadeUI {
                 this.p2NameLabel.textContent = `Daily #${(this.dailyPuzzleIdx || 0) + 1}/3`;
                 this.p2EloTag.textContent = '(Tactics)';
                 if (this.p2BotTag) this.p2BotTag.style.display = 'none';
-            } else if (this.playType === 'online_pvp') {
+            } else if (this.playType === 'online_pvp' || this.isRanked) {
                 this.p2NameLabel.textContent = this.opponentName || 'Opponent';
-                this.p2EloTag.textContent = `(${this.opponentRating || 'Online'})`;
-                if (this.p2BotTag) this.p2BotTag.style.display = this.isOpponentAi ? 'inline-block' : 'none';
+                this.p2EloTag.textContent = `(${this.opponentRating || '1200'})`;
+                if (this.p2BotTag) this.p2BotTag.style.display = 'none';
             } else if (this.playType === 'pvp') {
                 this.p2NameLabel.textContent = 'Player 2';
                 this.p2EloTag.textContent = '(Local)';
@@ -2301,11 +2447,11 @@ class BarricadeUI {
             } else if (this.playType === 'watch') {
                 this.p2NameLabel.textContent = 'noob10088';
                 this.p2EloTag.textContent = '(1980)';
-                if (this.p2BotTag) this.p2BotTag.style.display = 'inline-block';
+                if (this.p2BotTag) this.p2BotTag.style.display = 'none';
             } else {
                 this.p2NameLabel.textContent = this.opponentName || 'noob10042';
                 this.p2EloTag.textContent = `(${this.opponentRating || 1350})`;
-                if (this.p2BotTag) this.p2BotTag.style.display = 'inline-block';
+                if (this.p2BotTag) this.p2BotTag.style.display = (this.playType === 'pve' && !this.isRanked) ? 'inline-block' : 'none';
             }
         }
 
@@ -2313,10 +2459,10 @@ class BarricadeUI {
         if (this.game.gameMode === 'koth') {
             if (this.p3NameLabel) this.p3NameLabel.textContent = 'noob10055';
             if (this.p3EloTag) this.p3EloTag.textContent = '(1620)';
-            if (this.p3BotTag) this.p3BotTag.style.display = 'inline-block';
+            if (this.p3BotTag) this.p3BotTag.style.display = 'none';
             if (this.p4NameLabel) this.p4NameLabel.textContent = 'noob10082';
             if (this.p4EloTag) this.p4EloTag.textContent = '(1810)';
-            if (this.p4BotTag) this.p4BotTag.style.display = 'inline-block';
+            if (this.p4BotTag) this.p4BotTag.style.display = 'none';
         }
     }
 
@@ -2527,37 +2673,73 @@ class BarricadeUI {
     }
 
     renderProfileData(profile) {
-        // 1. Header Information
-        const avatarEl = document.getElementById('profile-avatar-display');
-        if (avatarEl) avatarEl.textContent = profile.avatar || '💎';
-        this.userAvatar = profile.avatar || '💎';
+        // 1. Calculate Centralized Rank Tier
+        const rankInfo = typeof getRankForRating === 'function' ? getRankForRating(profile.rating || 1200) : null;
 
+        // 2. Vector SVG Rank Badge (Screenshot 3)
+        const heroBadgeEl = document.getElementById('profile-hero-rank-badge');
+        if (heroBadgeEl && rankInfo) {
+            heroBadgeEl.innerHTML = typeof getRankBadgeSvg === 'function' ? getRankBadgeSvg(rankInfo.id, 56) : '🛡️';
+        }
+
+        // 3. User Identity (Middle Column)
         const nameEl = document.getElementById('profile-display-name');
         if (nameEl) nameEl.textContent = profile.displayName || profile.username;
 
-        const idEl = document.getElementById('profile-player-id');
-        if (idEl) idEl.textContent = `ID: ${profile.id}`;
-
-        const ratingEl = document.getElementById('profile-rating-badge');
-        if (ratingEl) ratingEl.textContent = `⭐ ${profile.rating} ELO`;
-
-        const tierEl = document.getElementById('profile-tier-badge');
-        if (tierEl && profile.rankTier) {
-            tierEl.textContent = `${profile.rankTier.icon} ${profile.rankTier.name}`;
-            const tierClass = profile.rankTier.name.toLowerCase().replace(/\s+/g, '-');
-            tierEl.className = `profile-rank-tier tier-${tierClass}`;
-        }
-
-        const accountEl = document.getElementById('profile-account-type-badge');
-        if (accountEl) {
-            accountEl.textContent = profile.isGuest ? '👤 Guest' : (profile.accountType || '👤 Linked');
-        }
-
-        const memberEl = document.getElementById('profile-member-since');
-        if (memberEl) {
+        const joinedEl = document.getElementById('profile-joined-date');
+        if (joinedEl) {
             const joinDate = new Date(profile.createdAt || Date.now());
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            memberEl.textContent = `📅 Joined ${months[joinDate.getMonth()]} ${joinDate.getFullYear()}`;
+            joinedEl.textContent = `Joined ${months[joinDate.getMonth()]} ${joinDate.getDate()}, ${joinDate.getFullYear()}`;
+        }
+
+        const countryStr = profile.country || 'India';
+        const countryFlagEl = document.getElementById('profile-country-flag');
+        if (countryFlagEl) countryFlagEl.textContent = this.getCountryFlag(countryStr);
+
+        const countryNameEl = document.getElementById('profile-country-name');
+        if (countryNameEl) countryNameEl.textContent = countryStr;
+
+        // 4. Rating & Score Column (Screenshot 3 - Top Right)
+        const rankTitleEl = document.getElementById('profile-rank-title');
+        if (rankTitleEl && rankInfo) {
+            rankTitleEl.textContent = rankInfo.name.toUpperCase();
+            rankTitleEl.style.color = rankInfo.color;
+        }
+
+        const currRatingEl = document.getElementById('profile-current-rating');
+        if (currRatingEl) currRatingEl.textContent = profile.rating || 1200;
+
+        const peakTagEl = document.getElementById('profile-peak-rating-tag');
+        if (peakTagEl) peakTagEl.textContent = `Peak ${profile.peakRating || profile.rating || 1200}`;
+
+        const globalRankEl = document.getElementById('profile-global-rank');
+        if (globalRankEl) globalRankEl.textContent = `Rank #${(profile.globalRank || 1).toLocaleString()}`;
+
+        const wlWinsEl = document.getElementById('profile-wl-wins');
+        const wlLossesEl = document.getElementById('profile-wl-losses');
+        const recRanked = profile.recordSummary?.ranked || {
+            wins: profile.mainStats?.totalWins || 0,
+            losses: profile.mainStats?.totalLosses || 0
+        };
+        if (wlWinsEl) wlWinsEl.textContent = `${recRanked.wins}W`;
+        if (wlLossesEl) wlLossesEl.textContent = `${recRanked.losses}L`;
+
+        // 5. Rank Progression Bar (Screenshot 3)
+        const progSubEl = document.getElementById('profile-progression-sub');
+        const progPctEl = document.getElementById('profile-progression-pct');
+        const progBarEl = document.getElementById('profile-progression-bar');
+        if (rankInfo) {
+            if (progSubEl) {
+                progSubEl.textContent = rankInfo.isMaxRank ? 'Apex Grandmaster' : `${rankInfo.pointsToNext} to ${rankInfo.nextRank}`;
+            }
+            if (progPctEl) {
+                progPctEl.textContent = rankInfo.isMaxRank ? 'MAX RANK' : `${rankInfo.progressPercent}%`;
+            }
+            if (progBarEl) {
+                progBarEl.style.width = `${rankInfo.progressPercent}%`;
+                if (rankInfo.color) progBarEl.style.background = `linear-gradient(90deg, ${rankInfo.color}, ${rankInfo.accentColor || rankInfo.color})`;
+            }
         }
 
         const guestBanner = document.getElementById('profile-guest-link-banner');
@@ -2565,19 +2747,19 @@ class BarricadeUI {
             guestBanner.style.display = profile.isGuest ? 'flex' : 'none';
         }
 
-        // 2. Tab 1: Overview
+        // 6. Tab 1: Overview
         this.renderOverviewTab(profile);
 
-        // 3. Tab 2: Statistics (10 Main + 9 Additional)
+        // 7. Tab 2: Statistics (10 Main + Categories + 9 Additional)
         this.renderStatsTab(profile);
 
-        // 4. Tab 3: Rating History
+        // 8. Tab 3: Rating History
         this.renderRatingHistoryTab(profile.id, this.ratingPeriodFilter || 'all');
 
-        // 5. Tab 4: Match History
+        // 9. Tab 4: Match History
         this.renderMatchHistoryTab(profile.id, this.matchesCurrentPage || 1, this.matchesFilter || 'all');
 
-        // 6. Tab 5: Achievements
+        // 10. Tab 5: Achievements
         this.renderAchievementsTab(profile.achievements || []);
 
         // Also sync home screen badge
@@ -2587,69 +2769,229 @@ class BarricadeUI {
         this.renderUserBadges();
     }
 
+    getCountryFlag(country) {
+        const flags = {
+            'India': '🇮🇳',
+            'United States': '🇺🇸',
+            'United Kingdom': '🇬🇧',
+            'Canada': '🇨🇦',
+            'Germany': '🇩🇪',
+            'France': '🇫🇷',
+            'Japan': '🇯🇵',
+            'South Korea': '🇰🇷',
+            'Australia': '🇦🇺',
+            'Brazil': '🇧🇷',
+            'Spain': '🇪🇸'
+        };
+        return flags[country] || '🌐';
+    }
+
     renderOverviewTab(profile) {
-        const peakEl = document.getElementById('ov-peak-rating');
-        if (peakEl) peakEl.textContent = profile.peakRating || profile.rating || 1200;
+        const rec = profile.recordSummary || {
+            all1v1: { games: 0, wins: 0, losses: 0, winRate: '0.0' },
+            ranked: { games: 0, wins: 0, losses: 0, winRate: '0.0' }
+        };
+        const setTxt = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
 
-        const streakEl = document.getElementById('ov-curr-streak');
-        if (streakEl) streakEl.textContent = profile.mainStats?.currentWinningStreak || 0;
+        // All 1v1 Split Bar (Screenshot 2)
+        setTxt('rec-all-total', rec.all1v1.games);
+        setTxt('rec-all-rate', `${rec.all1v1.winRate}%`);
+        setTxt('rec-all-wins', rec.all1v1.wins);
+        setTxt('rec-all-losses', rec.all1v1.losses);
+        const allTotal = (rec.all1v1.games > 0) ? rec.all1v1.games : 1;
+        const allWinPct = Math.round((rec.all1v1.wins / allTotal) * 100);
+        const allLossPct = 100 - allWinPct;
+        const allBarWin = document.getElementById('rec-all-bar-win');
+        const allBarLoss = document.getElementById('rec-all-bar-loss');
+        if (allBarWin) allBarWin.style.width = `${allWinPct}%`;
+        if (allBarLoss) allBarLoss.style.width = `${allLossPct}%`;
 
-        const winRateEl = document.getElementById('ov-win-rate');
-        if (winRateEl) winRateEl.textContent = `${profile.mainStats?.winRate || 0}%`;
+        // Ranked Split Bar (Screenshot 2)
+        setTxt('rec-ranked-total', rec.ranked.games);
+        setTxt('rec-ranked-rate', `${rec.ranked.winRate}%`);
+        setTxt('rec-ranked-wins', rec.ranked.wins);
+        setTxt('rec-ranked-losses', rec.ranked.losses);
+        const rankedTotal = (rec.ranked.games > 0) ? rec.ranked.games : 1;
+        const rankedWinPct = Math.round((rec.ranked.wins / rankedTotal) * 100);
+        const rankedLossPct = 100 - rankedWinPct;
+        const rankedBarWin = document.getElementById('rec-ranked-bar-win');
+        const rankedBarLoss = document.getElementById('rec-ranked-bar-loss');
+        if (rankedBarWin) rankedBarWin.style.width = `${rankedWinPct}%`;
+        if (rankedBarLoss) rankedBarLoss.style.width = `${rankedLossPct}%`;
 
-        const totalEl = document.getElementById('ov-total-games');
-        if (totalEl) totalEl.textContent = profile.mainStats?.totalGames || 0;
+        // 10 Square Recent Form Pills (Screenshot 2)
+        const formContainer = document.getElementById('profile-recent-form-pills');
+        if (formContainer) {
+            const formArr = profile.recentForm || [];
+            let pillsHtml = '';
+            for (let i = 0; i < 10; i++) {
+                const res = formArr[i];
+                if (res === 'W') {
+                    pillsHtml += `<div class="form-pill win" title="Victory">W</div>`;
+                } else if (res === 'L') {
+                    pillsHtml += `<div class="form-pill loss" title="Defeat">L</div>`;
+                } else if (res === 'D') {
+                    pillsHtml += `<div class="form-pill draw" title="Draw">D</div>`;
+                } else {
+                    pillsHtml += `<div class="form-pill draw" style="opacity: 0.35;" title="Unplayed">-</div>`;
+                }
+            }
+            formContainer.innerHTML = pillsHtml;
+        }
 
-        // Mini Recent Matches List (first 3)
-        const miniList = document.getElementById('profile-mini-matches-list');
-        if (miniList) {
+        // Rating Progression Chart (Screenshot 3)
+        this.renderOverviewRatingChart(profile.id, this.ovRatingPeriod || 'all');
+
+        // Recent Matches List (Screenshot 2 & 3)
+        const ovMatchesContainer = document.getElementById('profile-overview-matches-list');
+        if (ovMatchesContainer) {
             const matches = profile.recentMatches?.matches || [];
+            setTxt('ov-recent-total', `${profile.mainStats?.totalGames || matches.length} total`);
             if (matches.length === 0) {
-                miniList.innerHTML = `<div class="profile-empty-state">No completed matches yet. Jump into Ranked to build your record!</div>`;
+                ovMatchesContainer.innerHTML = `<div class="profile-empty-state">No completed matches yet. Jump into Ranked to build your record!</div>`;
             } else {
-                miniList.innerHTML = matches.slice(0, 3).map(m => `
-                    <div class="match-card-item" style="padding: 8px 10px; margin-bottom: 6px;">
-                        <div class="match-card-left">
-                            <span class="match-result-badge res-${m.result.toLowerCase()}">${m.result}</span>
-                            <div class="match-opponent-row" style="font-size: 0.74rem;">
-                                <span>${m.opponent.avatar}</span>
-                                <span>${m.opponent.username}</span>
-                                <span style="font-size: 0.65rem; color: #f59e0b;">(${m.opponent.rating})</span>
+                ovMatchesContainer.innerHTML = matches.slice(0, 5).map(m => {
+                    const isWin = m.isWinner;
+                    const pillClass = isWin ? 'w' : (m.isDraw ? 'd' : 'l');
+                    const resLetter = isWin ? 'W' : (m.isDraw ? 'D' : 'L');
+                    const deltaClass = isWin ? 'win' : (m.isDraw ? '' : 'loss');
+                    const deltaStr = m.eloDelta > 0 ? `+${m.eloDelta}` : `${m.eloDelta}`;
+                    const dateStr = new Date(m.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                    return `
+                        <div class="match-card-item-v3" data-match-id="${m.id}">
+                            <div class="match-card-v3-left">
+                                <div class="match-v3-pill ${pillClass}">${resLetter}</div>
+                                <div class="match-v3-info">
+                                    <div class="match-v3-title">${this.username} (${profile.rating}) vs ${m.opponent.username}</div>
+                                    <div class="match-v3-sub">${m.isRanked ? 'Ranked' : 'Casual'} · 3+0 · ${dateStr}</div>
+                                </div>
+                            </div>
+                            <div class="match-v3-right">
+                                <span class="match-v3-delta ${deltaClass}">${deltaStr}</span>
+                                <span class="match-v3-chevron">›</span>
                             </div>
                         </div>
-                        <div class="match-card-right">
-                            <span class="match-elo-delta ${m.isWinner ? 'win' : 'loss'}">${m.eloDelta > 0 ? '+' + m.eloDelta : m.eloDelta}</span>
-                            <span style="font-size: 0.64rem; color: #64748b;">${Math.round(m.durationSec)}s</span>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
+
+                ovMatchesContainer.querySelectorAll('.match-card-item-v3').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const matchId = card.dataset.matchId;
+                        const match = matches.find(x => x.id === matchId);
+                        if (match) this.openMatchDetailsSheet(match);
+                    });
+                });
             }
         }
+    }
 
-        // Mini Achievements Spotlight
-        const miniAchieve = document.getElementById('profile-mini-achievements-list');
-        if (miniAchieve) {
-            const achievements = profile.achievements || [];
-            const displayList = achievements.slice(0, 4);
-            miniAchieve.innerHTML = displayList.map(a => `
-                <div class="mini-achieve-badge ${a.unlocked ? 'unlocked' : ''}">
-                    <span class="mini-achieve-icon">${a.icon}</span>
-                    <span class="mini-achieve-name">${a.name}</span>
-                </div>
-            `).join('');
-        }
+    renderOverviewRatingChart(userId, period = 'all') {
+        fetch(`/api/user/rating-history?userId=${userId}&period=${period}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.history) {
+                    const h = data.history;
+                    const netEl = document.getElementById('ov-rating-net');
+                    if (netEl) {
+                        netEl.textContent = `${h.netChange >= 0 ? '+' : ''}${h.netChange}`;
+                        netEl.style.color = h.netChange >= 0 ? '#22c55e' : '#ef4444';
+                    }
+                    const gamesEl = document.getElementById('ov-rating-games');
+                    if (gamesEl) {
+                        gamesEl.textContent = h.points ? h.points.length : 0;
+                    }
+
+                    const svg = document.getElementById('ov-rating-svg');
+                    if (!svg) return;
+
+                    let chartData = h.points && h.points.length > 0 ? h.points : [
+                        { timestamp: Date.now() - 86400000, rating: h.startRating || 1200, delta: 0, opponent: 'Start' },
+                        { timestamp: Date.now(), rating: h.currentRating || 1200, delta: 0, opponent: 'Current' }
+                    ];
+
+                    if (chartData.length === 1) {
+                        chartData = [
+                            { timestamp: chartData[0].timestamp - 86400000, rating: h.startRating || chartData[0].rating, delta: 0, opponent: 'Initial' },
+                            chartData[0]
+                        ];
+                    }
+
+                    const ratings = chartData.map(p => p.rating);
+                    let minRating = Math.min(...ratings, 1100);
+                    let maxRating = Math.max(...ratings, 1500);
+                    minRating = Math.floor((minRating - 30) / 100) * 100;
+                    maxRating = Math.ceil((maxRating + 30) / 100) * 100;
+                    const ratingRange = Math.max(100, maxRating - minRating);
+
+                    const svgWidth = 380;
+                    const svgHeight = 160;
+                    const padX = 35;
+                    const padY = 20;
+                    const plotWidth = svgWidth - padX - 15;
+                    const plotHeight = svgHeight - padY - 20;
+
+                    const getY = (val) => padY + plotHeight - ((val - minRating) / ratingRange) * plotHeight;
+                    const getX = (idx) => padX + (idx / (chartData.length - 1)) * plotWidth;
+
+                    let gridLines = '';
+                    for (let r = minRating; r <= maxRating; r += 100) {
+                        const y = getY(r);
+                        gridLines += `
+                            <line x1="${padX}" y1="${y}" x2="${svgWidth - 15}" y2="${y}" stroke="#242630" stroke-width="1" stroke-dasharray="3,3" />
+                            <text x="${padX - 6}" y="${y + 3}" fill="#64748b" font-size="9" text-anchor="end" font-family="monospace">${r}</text>
+                        `;
+                    }
+
+                    const coords = chartData.map((p, idx) => ({
+                        x: getX(idx),
+                        y: getY(p.rating),
+                        point: p
+                    }));
+
+                    const polylinePoints = coords.map(c => `${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+                    const areaPoints = `${coords[0].x.toFixed(1)},${getY(minRating).toFixed(1)} ${polylinePoints} ${coords[coords.length - 1].x.toFixed(1)},${getY(minRating).toFixed(1)}`;
+
+                    const circles = coords.map((c) => `
+                        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="4" fill="#f59e0b" stroke="#17181e" stroke-width="2" />
+                    `).join('');
+
+                    // Date labels at bottom
+                    const firstDate = new Date(chartData[0].timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                    const lastDate = new Date(chartData[chartData.length - 1].timestamp).toLocaleDateString([], { month: 'short', day: 'numeric' });
+
+                    svg.innerHTML = `
+                        <defs>
+                            <linearGradient id="ovChartGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.3" />
+                                <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.0" />
+                            </linearGradient>
+                        </defs>
+                        ${gridLines}
+                        <polygon points="${areaPoints}" fill="url(#ovChartGrad)" />
+                        <polyline points="${polylinePoints}" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                        ${circles}
+                        <text x="${padX}" y="${svgHeight - 4}" fill="#64748b" font-size="9" text-anchor="start">${firstDate}</text>
+                        <text x="${svgWidth - 15}" y="${svgHeight - 4}" fill="#64748b" font-size="9" text-anchor="end">${lastDate}</text>
+                    `;
+                }
+            })
+            .catch(() => {});
     }
 
     renderStatsTab(profile) {
         const m = profile.mainStats || {};
         const a = profile.additionalStats || {};
+        const cats = profile.categoryStats || {};
 
-        // 10 Main Career Stats
         const setVal = (id, val) => {
             const el = document.getElementById(id);
             if (el) el.textContent = val !== undefined ? val : 0;
         };
 
+        // 10 Main Career Stats
         setVal('stat-total-games', m.totalGames);
         setVal('stat-total-wins', m.totalWins);
         setVal('stat-total-losses', m.totalLosses);
@@ -2661,6 +3003,42 @@ class BarricadeUI {
         setVal('stat-best-streak', m.bestWinningStreak);
         setVal('stat-losing-streak', m.currentLosingStreak);
 
+        // Categories Breakdown
+        const rStats = cats.ranked || { wins: 0, losses: 0 };
+        const cStats = cats.casual || { wins: 0, losses: 0 };
+        const kStats = cats.koth || { wins: 0, losses: 0 };
+        const bStats = cats.breaking || { wins: 0, losses: 0 };
+
+        const rTotal = rStats.wins + rStats.losses;
+        const rRate = rTotal > 0 ? Math.round((rStats.wins / rTotal) * 100) : 0;
+        setVal('cat-ranked-record', `${rStats.wins}W - ${rStats.losses}L`);
+        setVal('cat-ranked-rate', `Win Rate: ${rRate}%`);
+
+        const cTotal = cStats.wins + cStats.losses;
+        const cRate = cTotal > 0 ? Math.round((cStats.wins / cTotal) * 100) : 0;
+        setVal('cat-casual-record', `${cStats.wins}W - ${cStats.losses}L`);
+        setVal('cat-casual-rate', `Win Rate: ${cRate}%`);
+
+        const kTotal = kStats.wins + kStats.losses;
+        const kRate = kTotal > 0 ? Math.round((kStats.wins / kTotal) * 100) : 0;
+        setVal('cat-koth-record', `${kStats.wins}W - ${kStats.losses}L`);
+        setVal('cat-koth-rate', `Win Rate: ${kRate}%`);
+
+        setVal('cat-breaking-record', `${bStats.wins}W - ${bStats.losses}L`);
+        setVal('cat-breaking-rate', `Cost: 5 Walls`);
+
+        // Computer Difficulty Breakdown
+        const compDiff = cats.computer?.byDifficulty || {
+            easy: { wins: 0, losses: 0 },
+            medium: { wins: 0, losses: 0 },
+            hard: { wins: 0, losses: 0 },
+            impossible: { wins: 0, losses: 0 }
+        };
+        setVal('comp-easy-record', `${compDiff.easy?.wins || 0}W - ${compDiff.easy?.losses || 0}L`);
+        setVal('comp-med-record', `${compDiff.medium?.wins || 0}W - ${compDiff.medium?.losses || 0}L`);
+        setVal('comp-hard-record', `${compDiff.hard?.wins || 0}W - ${compDiff.hard?.losses || 0}L`);
+        setVal('comp-apex-record', `${compDiff.impossible?.wins || 0}W - ${compDiff.impossible?.losses || 0}L`);
+
         // 9 Additional Competitive Stats
         setVal('stat-ranked-played', a.rankedPlayed);
         setVal('stat-casual-played', a.casualPlayed);
@@ -2671,6 +3049,99 @@ class BarricadeUI {
         setVal('stat-daily-games', a.dailyGames);
         setVal('stat-daily-wins', a.dailyWins);
         setVal('stat-daily-losses', a.dailyLosses);
+    }
+
+    openRanksSheet() {
+        const list = document.getElementById('ranks-tier-list');
+        if (!list || typeof FORTIVEX_RANKS === 'undefined') return;
+
+        const currentRank = typeof getRankForRating === 'function' ? getRankForRating(this.userRating || 1200) : null;
+
+        list.innerHTML = FORTIVEX_RANKS.map(tier => {
+            const isCurrent = currentRank && currentRank.id === tier.id;
+            const rangeStr = tier.max === Infinity ? `${tier.min}+` : `${tier.min}–${tier.max}`;
+            const badgeSvg = typeof getRankBadgeSvg === 'function' ? getRankBadgeSvg(tier.id, 34) : '🛡️';
+
+            let subInfo = '';
+            if (isCurrent) {
+                const toNextTxt = currentRank.isMaxRank ? 'Apex Rank' : `${currentRank.pointsToNext} to ${currentRank.nextRank}`;
+                subInfo = `
+                    <div class="rank-here-tag">You're here</div>
+                    <div class="rank-to-next-tag">${toNextTxt}</div>
+                `;
+            }
+
+            return `
+                <div class="rank-tier-row ${isCurrent ? 'current-rank' : ''}">
+                    <div class="rank-tier-left">
+                        <div class="rank-tier-badge-col">${badgeSvg}</div>
+                        <div class="rank-tier-info-col">
+                            <div class="rank-tier-name" style="color: ${tier.color};">${tier.name}</div>
+                            ${subInfo}
+                        </div>
+                    </div>
+                    <div class="rank-tier-range-col" style="color: ${tier.color};">${rangeStr}</div>
+                </div>
+            `;
+        }).join('');
+
+        this.ranksSheet?.classList.add('open');
+    }
+
+    openMatchDetailsSheet(match) {
+        const content = document.getElementById('match-details-content');
+        if (!content) return;
+
+        const isWinner = match.isWinner;
+        const resTitle = isWinner ? 'Victory' : (match.isDraw ? 'Draw' : 'Defeat');
+        const resColor = isWinner ? '#22c55e' : (match.isDraw ? '#94a3b8' : '#ef4444');
+        const deltaStr = match.eloDelta > 0 ? `+${match.eloDelta}` : `${match.eloDelta}`;
+        const dateStr = new Date(match.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+        content.innerHTML = `
+            <div class="md-top-summary">
+                <div class="md-row-meta">
+                    <span>Result</span>
+                    <strong style="color: ${resColor}; font-size: 0.95rem;">${resTitle} (${deltaStr})</strong>
+                </div>
+                <div class="md-row-meta">
+                    <span>Opponent</span>
+                    <span>${match.opponent.avatar || '🤖'} ${match.opponent.username} (${match.opponent.rating})</span>
+                </div>
+                <div class="md-row-meta">
+                    <span>Mode</span>
+                    <span>${match.isRanked ? 'Ranked 1v1' : 'Casual 1v1'} · ${match.gameplayMode || 'Normal'}</span>
+                </div>
+                <div class="md-row-meta">
+                    <span>Turns</span>
+                    <span>${match.turnsCount || 24} turns</span>
+                </div>
+                <div class="md-row-meta">
+                    <span>Duration</span>
+                    <span>${Math.round(match.durationSec || 60)}s</span>
+                </div>
+                <div class="md-row-meta">
+                    <span>Played On</span>
+                    <span>${dateStr}</span>
+                </div>
+            </div>
+            
+            <div class="md-moves-title">MATCH NOTATION</div>
+            <div class="md-moves-scroll">
+                1. e2 ... 2. e8 ... 3. e3 ... 4. e7 ... 5. e4 [Wall H 4,5] ... 6. d7 ... 7. e5 ... 8. c7 ... 9. e6 ... 10. b7 ... 11. e7 ... 12. a7 ... 13. e8 ... 14. e9 (Goal)
+            </div>
+            
+            <button id="btn-watch-match-replay" class="btn-watch-replay" data-match-id="${match.id}">
+                <span>▶ Watch Replay</span>
+            </button>
+        `;
+
+        document.getElementById('btn-watch-match-replay')?.addEventListener('click', () => {
+            this.matchDetailsSheet?.classList.remove('open');
+            this.loadMatchReplay(match.id);
+        });
+
+        this.matchDetailsSheet?.classList.add('open');
     }
 
     renderRatingHistoryTab(userId, period = 'all') {
@@ -2928,6 +3399,11 @@ class BarricadeUI {
         const input = document.getElementById('edit-profile-displayname-input');
         if (input) input.value = this.currentProfileData.displayName || this.currentProfileData.username;
 
+        const countrySelect = document.getElementById('edit-profile-country-select');
+        if (countrySelect && this.currentProfileData.country) {
+            countrySelect.value = this.currentProfileData.country;
+        }
+
         const statusLabel = document.getElementById('edit-account-status-label');
         if (statusLabel) {
             statusLabel.textContent = this.currentProfileData.isGuest
@@ -2951,46 +3427,38 @@ class BarricadeUI {
         const input = document.getElementById('edit-profile-displayname-input');
         const newName = input ? input.value.trim() : '';
 
-        // 1. Update avatar
-        if (this.selectedAvatar && this.selectedAvatar !== this.currentProfileData?.avatar) {
-            fetch('/api/user/update-avatar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: this.userId, avatar: this.selectedAvatar })
-            }).catch(() => {});
-        }
+        const countrySelect = document.getElementById('edit-profile-country-select');
+        const selectedCountry = countrySelect ? countrySelect.value : (this.currentProfileData?.country || 'India');
 
-        // 2. Update display name if changed
-        if (newName && newName !== this.currentProfileData?.username && newName !== this.currentProfileData?.displayName) {
-            fetch('/api/auth/custom-name', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: this.userId, username: newName })
+        fetch('/api/user/update-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: this.userId,
+                displayName: newName,
+                avatar: this.selectedAvatar,
+                country: selectedCountry
             })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.user) {
-                    this.username = data.user.username;
-                    localStorage.setItem('fortivex_username', this.username);
-                    this.editProfileSheet?.classList.remove('open');
-                    this.showToast('Profile updated successfully!');
-                    sounds.playVictory();
-                    this.openProfileScreen();
-                } else {
-                    this.showToast(data.reason || 'Display name already taken');
-                    sounds.playIllegal();
-                }
-            })
-            .catch(() => {
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.user) {
+                this.username = data.user.displayName || data.user.username;
+                localStorage.setItem('fortivex_username', this.username);
+                this.userAvatar = data.user.avatar || '💎';
                 this.editProfileSheet?.classList.remove('open');
+                this.showToast('Profile updated successfully!');
+                sounds.playVictory();
                 this.openProfileScreen();
-            });
-        } else {
+            } else {
+                this.showToast(data.reason || 'Failed to update profile');
+                sounds.playIllegal();
+            }
+        })
+        .catch(() => {
             this.editProfileSheet?.classList.remove('open');
-            this.showToast('Profile updated!');
-            sounds.playVictory();
             this.openProfileScreen();
-        }
+        });
     }
 
     loadMatchReplay(matchId) {

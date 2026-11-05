@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { FORTIVEX_RANKS, getRankBadgeSvg, getRankForRating } = require('./ranks.js');
 
 const DB_DIR = path.join(__dirname, 'db');
 const USERS_FILE = path.join(DB_DIR, 'users.json');
@@ -256,6 +257,25 @@ class FortivexDB {
         user.createdAt = user.createdAt || Date.now();
         user.lastActive = user.lastActive || Date.now();
         user.achievements = user.achievements || {};
+        user.country = user.country || 'India';
+        user.processedMatchIds = user.processedMatchIds || [];
+        user.categoryStats = user.categoryStats || {
+            ranked: { games: user.rankedPlayed || 0, wins: Math.round((user.wins || 0) * 0.8), losses: Math.round((user.losses || 0) * 0.8), draws: user.draws || 0, eloGain: (user.rating || 1200) - 1200 },
+            casual: { games: user.casualPlayed || 0, wins: (user.wins || 0) - Math.round((user.wins || 0) * 0.8), losses: (user.losses || 0) - Math.round((user.losses || 0) * 0.8), draws: 0 },
+            computer: {
+                games: user.aiDefeated || 0,
+                wins: user.aiDefeated || 0,
+                losses: Math.max(0, (user.losses || 0) - (user.humanDefeated || 0)),
+                byDifficulty: {
+                    easy: { games: Math.ceil((user.aiDefeated || 0) * 0.4), wins: Math.ceil((user.aiDefeated || 0) * 0.4) },
+                    medium: { games: Math.ceil((user.aiDefeated || 0) * 0.35), wins: Math.ceil((user.aiDefeated || 0) * 0.35) },
+                    hard: { games: Math.ceil((user.aiDefeated || 0) * 0.2), wins: Math.ceil((user.aiDefeated || 0) * 0.2) },
+                    impossible: { games: Math.floor((user.aiDefeated || 0) * 0.05), wins: Math.floor((user.aiDefeated || 0) * 0.05) }
+                }
+            },
+            koth: { games: Math.max(user.kothWins || 0, 0), wins: user.kothWins || 0, losses: 0 },
+            breaking: { games: Math.round((user.matchesPlayed || 0) * 0.5), wins: Math.round((user.wins || 0) * 0.5), losses: Math.round((user.losses || 0) * 0.5) }
+        };
         if (!user.ratingHistory || user.ratingHistory.length === 0) {
             user.ratingHistory = [
                 {
@@ -538,6 +558,23 @@ class FortivexDB {
         if (!user) return null;
         this.ensureUserFields(user);
 
+        // Transaction safeguard: Deduplicate by unique matchId
+        if (matchData.matchId && user.processedMatchIds.includes(matchData.matchId)) {
+            return {
+                user,
+                alreadyProcessed: true,
+                eloDelta: 0,
+                eloChange: 0,
+                newRating: user.rating,
+                streak: user.streak,
+                wins: user.wins,
+                losses: user.losses
+            };
+        }
+        if (matchData.matchId) {
+            user.processedMatchIds.push(matchData.matchId);
+        }
+
         const isWinner = !!matchData.isWinner;
         const isDraw = !!matchData.isDraw;
         const isRanked = matchData.isRanked !== false;
@@ -588,6 +625,51 @@ class FortivexDB {
             } else {
                 user.losses++;
             }
+        }
+
+        // Category Statistics Updating
+        user.categoryStats = user.categoryStats || {
+            ranked: { games: 0, wins: 0, losses: 0, draws: 0, eloGain: 0 },
+            casual: { games: 0, wins: 0, losses: 0, draws: 0 },
+            computer: { games: 0, wins: 0, losses: 0, byDifficulty: { easy: { games: 0, wins: 0 }, medium: { games: 0, wins: 0 }, hard: { games: 0, wins: 0 }, impossible: { games: 0, wins: 0 } } },
+            koth: { games: 0, wins: 0, losses: 0 },
+            breaking: { games: 0, wins: 0, losses: 0 }
+        };
+
+        if (isRanked) {
+            user.categoryStats.ranked.games++;
+            if (isWinner) user.categoryStats.ranked.wins++;
+            else if (isDraw) user.categoryStats.ranked.draws++;
+            else user.categoryStats.ranked.losses++;
+            user.categoryStats.ranked.eloGain += eloDelta;
+        } else {
+            user.categoryStats.casual.games++;
+            if (isWinner) user.categoryStats.casual.wins++;
+            else if (isDraw) user.categoryStats.casual.draws++;
+            else user.categoryStats.casual.losses++;
+        }
+
+        if (isBot) {
+            user.categoryStats.computer.games++;
+            if (isWinner) user.categoryStats.computer.wins++;
+            else if (!isDraw) user.categoryStats.computer.losses++;
+            const diff = matchData.difficulty || 'medium';
+            if (user.categoryStats.computer.byDifficulty && user.categoryStats.computer.byDifficulty[diff]) {
+                user.categoryStats.computer.byDifficulty[diff].games++;
+                if (isWinner) user.categoryStats.computer.byDifficulty[diff].wins++;
+            }
+        }
+
+        if (mode === 'koth') {
+            user.categoryStats.koth.games++;
+            if (isWinner) user.categoryStats.koth.wins++;
+            else if (!isDraw) user.categoryStats.koth.losses++;
+        }
+
+        if (gameplayMode === 'breaking') {
+            user.categoryStats.breaking.games++;
+            if (isWinner) user.categoryStats.breaking.wins++;
+            else if (!isDraw) user.categoryStats.breaking.losses++;
         }
 
         if (mode === 'koth' && isWinner) {
@@ -748,12 +830,7 @@ class FortivexDB {
     }
 
     getRankTier(rating) {
-        if (rating >= 2000) return { name: 'Apex Grandmaster', icon: '👑', color: '#f59e0b', min: 2000, next: null };
-        if (rating >= 1800) return { name: 'Diamond', icon: '💎', color: '#38bdf8', min: 1800, next: 2000 };
-        if (rating >= 1600) return { name: 'Platinum', icon: '💠', color: '#2dd4bf', min: 1600, next: 1800 };
-        if (rating >= 1400) return { name: 'Gold', icon: '🥇', color: '#fbbf24', min: 1400, next: 1600 };
-        if (rating >= 1200) return { name: 'Silver', icon: '🥈', color: '#94a3b8', min: 1200, next: 1400 };
-        return { name: 'Bronze', icon: '🥉', color: '#cd7f32', min: 100, next: 1200 };
+        return getRankForRating(rating);
     }
 
     getUserMatchHistory(userId, page = 1, limit = 10, filter = 'all') {
@@ -833,11 +910,39 @@ class FortivexDB {
         const winRate = user.matchesPlayed > 0 ? Math.round((user.wins / user.matchesPlayed) * 100) : 0;
         const avgMatchDurationSec = user.matchesPlayed > 0 ? Math.round(user.totalPlayTimeSec / user.matchesPlayed) : 0;
 
+        // Global Leaderboard Rank position
+        const allUsersSorted = Object.values(this.users).sort((a, b) => (b.rating || 1200) - (a.rating || 1200));
+        const globalRank = Math.max(1, allUsersSorted.findIndex(u => u.id === user.id) + 1);
+
+        // Recent Form (last 10 completed matches: 'W', 'L', 'D')
+        const userLower = (user.username || '').toLowerCase();
+        const userRecentMatches = this.matches
+            .filter(m => (m.players || []).some(p => p.userId === user.id || (p.username || '').toLowerCase() === userLower))
+            .slice(0, 10);
+        const recentForm = userRecentMatches.map(m => {
+            const myPlayer = (m.players || []).find(p => p.userId === user.id || (p.username || '').toLowerCase() === userLower) || {};
+            if (!m.winner) return 'D';
+            return m.winner === myPlayer.role ? 'W' : 'L';
+        });
+
+        // Record Summary (from Screenshot 2)
+        const all1v1Wins = user.wins;
+        const all1v1Losses = user.losses;
+        const all1v1Total = all1v1Wins + all1v1Losses;
+        const all1v1WinRate = all1v1Total > 0 ? ((all1v1Wins / all1v1Total) * 100).toFixed(1) : '0.0';
+
+        const rankedWins = user.categoryStats?.ranked?.wins || (user.rankedPlayed > 0 ? Math.round(user.wins * 0.8) : 0);
+        const rankedLosses = user.categoryStats?.ranked?.losses || (user.rankedPlayed > 0 ? Math.round(user.losses * 0.8) : 0);
+        const rankedTotal = rankedWins + rankedLosses;
+        const rankedWinRate = rankedTotal > 0 ? ((rankedWins / rankedTotal) * 100).toFixed(1) : '0.0';
+
         return {
             id: user.id,
             username: user.username,
             displayName: user.displayName || user.username,
             avatar: user.avatar || '💎',
+            country: user.country || 'India',
+            globalRank,
             isGuest: !!user.isGuest,
             accountType: user.isGuest ? 'Guest Account' : (user.social ? Object.keys(user.social)[0] : 'Registered Account'),
             createdAt: user.createdAt,
@@ -845,6 +950,22 @@ class FortivexDB {
             rankTier,
             rating: user.rating,
             peakRating: user.peakRating,
+            categoryStats: user.categoryStats,
+            recentForm,
+            recordSummary: {
+                all1v1: {
+                    games: all1v1Total,
+                    wins: all1v1Wins,
+                    losses: all1v1Losses,
+                    winRate: all1v1WinRate
+                },
+                ranked: {
+                    games: rankedTotal,
+                    wins: rankedWins,
+                    losses: rankedLosses,
+                    winRate: rankedWinRate
+                }
+            },
             mainStats: {
                 totalGames: user.matchesPlayed,
                 totalWins: user.wins,

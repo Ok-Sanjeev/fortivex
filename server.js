@@ -22,6 +22,7 @@ const { WebSocketServer, WebSocket } = require('ws');
 const BarricadeGame = require('./game.js');
 const db = require('./db.js');
 const { AI_PROFILES, getAiProfileForRating } = require('./ai_profiles.js');
+const { FORTIVEX_RANKS, getRankBadgeSvg, getRankForRating } = require('./ranks.js');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -86,11 +87,11 @@ setInterval(() => {
                 hostUserId: item.userId,
                 hostRating: item.rating,
                 settings: {
-                    mode: 'classic',
-                    gameplayMode: 'breaking',
-                    breakCost: 5,
+                    mode: item.mode || 'classic',
+                    gameplayMode: item.gameplayMode || 'normal',
+                    breakCost: item.breakCost || 0,
                     timeSec: 180,
-                    walls: 10,
+                    walls: (item.mode === 'koth') ? 5 : 10,
                     isRanked: true
                 },
                 p1: item.username,
@@ -103,10 +104,12 @@ setInterval(() => {
                 matched: true,
                 roomCode,
                 role: 1,
+                settings: room.settings,
                 opponent: {
                     username: botProfile.username, // Strictly noobXXXXX
                     rating: botProfile.rating,
-                    isBot: true,
+                    avatar: botProfile.avatar || '💎',
+                    isBot: true, // Internal execution flag for engine
                     difficulty: botProfile.difficulty,
                     playstyle: botProfile.playstyle
                 }
@@ -134,8 +137,8 @@ function createServerRoom({
 
     const game = new BarricadeGame({
         gameMode: mode,
-        gameplayMode: settings.gameplayMode || 'breaking',
-        breakCost: settings.breakCost || 5,
+        gameplayMode: settings.gameplayMode || 'normal',
+        breakCost: (settings.gameplayMode === 'breaking') ? (settings.breakCost || 5) : 0,
         initialWalls: settings.walls || (mode === 'koth' ? 5 : 10),
         timeControl: { initialSec: settings.timeSec || 180, incrementSec: 2 }
     });
@@ -388,6 +391,32 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // 4g. Centralized Competitive Ranks
+    if (req.method === 'GET' && reqPath === '/api/ranks') {
+        sendJson(res, 200, { success: true, ranks: FORTIVEX_RANKS });
+        return;
+    }
+
+    // 4h. Update Profile (Avatar, Display Name, Country)
+    if (req.method === 'POST' && reqPath === '/api/user/update-profile') {
+        parseJsonBody(req, (err, data) => {
+            if (err || !data.userId) return sendJson(res, 400, { success: false, reason: 'Missing userId' });
+            const user = db.getUser(data.userId);
+            if (!user) return sendJson(res, 404, { success: false, reason: 'User not found' });
+            if (data.avatar) user.avatar = data.avatar;
+            if (data.country) user.country = data.country;
+            if (data.displayName) {
+                const clean = String(data.displayName).trim().slice(0, 15);
+                if (clean.length >= 3 && !db.isUsernameTaken(clean, user.id)) {
+                    user.displayName = clean;
+                }
+            }
+            db.saveUsers();
+            sendJson(res, 200, { success: true, user });
+        });
+        return;
+    }
+
     // 5. Global Leaderboard
     if (req.method === 'GET' && reqPath === '/api/leaderboard') {
         const leaderboard = db.getLeaderboard(25);
@@ -410,11 +439,10 @@ const server = http.createServer((req, res) => {
             const activeMatchesCount = Array.from(activeRooms.values()).filter(r => r.status === 'playing').length;
             const publicRoomsCount = Array.from(activeRooms.values()).filter(r => r.isPublic && r.status === 'waiting').length;
 
+            const totalOnline = activeClients.size + 100; // All 100 persistent profiles are counted as online players
             sendJson(res, 200, {
                 success: true,
-                onlineCount: Math.max(activeClients.size, 1),
-                humanOnlineCount: Math.max(activeClients.size, 1),
-                aiAvailableCount: 100,
+                onlineCount: totalOnline,
                 activeMatchesCount,
                 publicRoomsCount,
                 inGameCount,
@@ -429,11 +457,10 @@ const server = http.createServer((req, res) => {
         const inGameCount = Array.from(activeClients.values()).filter(c => c.status === 'game').length;
         const activeMatchesCount = Array.from(activeRooms.values()).filter(r => r.status === 'playing').length;
         const publicRoomsCount = Array.from(activeRooms.values()).filter(r => r.isPublic && r.status === 'waiting').length;
+        const totalOnline = activeClients.size + 100;
 
         sendJson(res, 200, {
-            onlineCount: Math.max(activeClients.size, 1),
-            humanOnlineCount: Math.max(activeClients.size, 1),
-            aiAvailableCount: 100,
+            onlineCount: totalOnline,
             activeMatchesCount,
             publicRoomsCount,
             inGameCount,
@@ -476,7 +503,7 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 8. Ranked Matchmaking Queue
+    // 8. Ranked Matchmaking Queue (Supports Mode Selection)
     if (req.method === 'POST' && reqPath === '/api/matchmaking/join') {
         parseJsonBody(req, (err, data) => {
             if (err || !data.clientId) return sendJson(res, 400, { error: 'Missing clientId' });
@@ -484,14 +511,18 @@ const server = http.createServer((req, res) => {
             const username = data.username || 'Player';
             const userId = data.userId || null;
             const rating = parseInt(data.rating || '1200', 10);
+            const mode = data.mode || 'classic';
+            const gameplayMode = data.gameplayMode || 'normal';
+            const breakCost = (gameplayMode === 'breaking') ? parseInt(data.breakCost || '5', 10) : 0;
 
             // Clean previous entry
             const idx = rankedQueue.findIndex(q => q.clientId === clientId);
             if (idx !== -1) rankedQueue.splice(idx, 1);
 
-            // If another human is waiting, pair them immediately!
-            if (rankedQueue.length > 0) {
-                const opp = rankedQueue.shift();
+            // If another human is waiting in compatible mode, pair them immediately!
+            const matchIdx = rankedQueue.findIndex(q => q.mode === mode && q.gameplayMode === gameplayMode);
+            if (matchIdx !== -1) {
+                const opp = rankedQueue.splice(matchIdx, 1)[0];
                 const roomCode = 'FORT-R' + Math.floor(1000 + Math.random() * 9000);
 
                 const room = createServerRoom({
@@ -502,11 +533,11 @@ const server = http.createServer((req, res) => {
                     hostUserId: opp.userId,
                     hostRating: opp.rating,
                     settings: {
-                        mode: 'classic',
-                        gameplayMode: 'breaking',
-                        breakCost: 5,
+                        mode,
+                        gameplayMode,
+                        breakCost,
                         timeSec: 180,
-                        walls: 10,
+                        walls: (mode === 'koth') ? 5 : 10,
                         isRanked: true
                     },
                     p1: opp.username,
@@ -529,7 +560,7 @@ const server = http.createServer((req, res) => {
                     opponent: { username: opp.username, rating: opp.rating, isBot: false }
                 });
             } else {
-                rankedQueue.push({ clientId, userId, username, rating, joinedAt: Date.now() });
+                rankedQueue.push({ clientId, userId, username, rating, mode, gameplayMode, breakCost, joinedAt: Date.now() });
                 return sendJson(res, 200, { matched: false, queueLength: rankedQueue.length });
             }
         });
