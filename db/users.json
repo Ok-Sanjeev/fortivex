@@ -284,24 +284,24 @@
     "idNum": 10116,
     "username": "noob10116",
     "displayName": "noob10116",
-    "rating": 1140,
-    "streak": 0,
-    "maxStreak": 1,
-    "wins": 1,
+    "rating": 1200,
+    "streak": 2,
+    "maxStreak": 2,
+    "wins": 3,
     "losses": 3,
     "draws": 0,
-    "matchesPlayed": 4,
+    "matchesPlayed": 6,
     "isGuest": false,
     "createdAt": 1793804763608,
-    "lastActive": 1793886587051,
+    "lastActive": 1793889578497,
     "avatar": "💎",
     "peakRating": 1200,
-    "currentLosingStreak": 2,
-    "rankedPlayed": 4,
+    "currentLosingStreak": 0,
+    "rankedPlayed": 6,
     "casualPlayed": 0,
     "aiDefeated": 0,
-    "humanDefeated": 1,
-    "totalPlayTimeSec": 257,
+    "humanDefeated": 3,
+    "totalPlayTimeSec": 377,
     "wallsPlacedTotal": 8,
     "wallsBrokenTotal": 2,
     "kothWins": 0,
@@ -310,6 +310,10 @@
       "first_win": {
         "unlocked": true,
         "unlockedAt": 1793885991703
+      },
+      "ranked_warrior": {
+        "unlocked": true,
+        "unlockedAt": 1793888811978
       }
     },
     "ratingHistory": [
@@ -350,14 +354,80 @@
         "opponent": "noob10022",
         "opponentRating": 1135,
         "matchId": "match_1793886587051_xq6boe"
+      },
+      {
+        "timestamp": 1793888811978,
+        "rating": 1170,
+        "delta": 30,
+        "opponent": "noob10021",
+        "opponentRating": 1120,
+        "matchId": "match_1793888811974_xrlixb"
+      },
+      {
+        "timestamp": 1793889578502,
+        "rating": 1200,
+        "delta": 30,
+        "opponent": "noob10017",
+        "opponentRating": 1060,
+        "matchId": "match_1793889578497_cw5jw9"
       }
     ],
     "social": {
       "google": {
-        "providerId": "google_6atab6no8",
+        "providerId": "google_5qe43g80t",
         "email": "noob10116@google.com",
         "name": "noob10116",
-        "linkedAt": 1793886171928
+        "linkedAt": 1793888657140
+      }
+    },
+    "country": "India",
+    "processedMatchIds": [],
+    "categoryStats": {
+      "ranked": {
+        "games": 6,
+        "wins": 3,
+        "losses": 2,
+        "draws": 0,
+        "eloGain": 0
+      },
+      "casual": {
+        "games": 0,
+        "wins": 0,
+        "losses": 1,
+        "draws": 0
+      },
+      "computer": {
+        "games": 0,
+        "wins": 0,
+        "losses": 2,
+        "byDifficulty": {
+          "easy": {
+            "games": 0,
+            "wins": 0
+          },
+          "medium": {
+            "games": 0,
+            "wins": 0
+          },
+          "hard": {
+            "games": 0,
+            "wins": 0
+          },
+          "impossible": {
+            "games": 0,
+            "wins": 0
+          }
+        }
+      },
+      "koth": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0
+      },
+      "breaking": {
+        "games": 2,
+        "wins": 1,
+        "losses": 2
       }
     }
   },
@@ -1346,19 +1416,19 @@
     "idNum": 10050,
     "username": "noob10050",
     "displayName": "noob10050",
-    "rating": 1164,
+    "rating": 1134,
     "difficulty": "medium",
     "playstyle": "Barricade specialist",
     "streak": 0,
     "maxStreak": 7,
     "wins": 24,
-    "losses": 28,
+    "losses": 29,
     "draws": 0,
-    "matchesPlayed": 52,
+    "matchesPlayed": 53,
     "isBot": true,
     "status": "available",
     "createdAt": 1789399351525,
-    "lastActive": 1793888250284,
+    "lastActive": 1793890722191,
     "matchHistory": []
   },
   "ai_10051": {
@@ -1946,19 +2016,19 @@
     "idNum": 10080,
     "username": "noob10080",
     "displayName": "noob10080",
-    "rating": 2204,
+    "rating": 2234,
     "difficulty": "hard",
     "playstyle": "High-risk",
-    "streak": 11,
-    "maxStreak": 11,
-    "wins": 34,
+    "streak": 12,
+    "maxStreak": 12,
+    "wins": 35,
     "losses": 18,
     "draws": 0,
-    "matchesPlayed": 52,
+    "matchesPlayed": 53,
     "isBot": true,
     "status": "available",
     "createdAt": 1791991351526,
-    "lastActive": 1793888250292,
+    "lastActive": 1793890722201,
     "matchHistory": []
   },
   "ai_10081": {
@@ -5403,6 +5473,429 @@
         "email": "vex@google.com",
         "name": "Alex Vex",
         "linkedAt": 1793888250272
+      }
+    }
+  },
+  "usr_10167_0a3n15": {
+    "id": "usr_10167_0a3n15",
+    "idNum": 10167,
+    "username": "Apex_32115",
+    "displayName": "Apex_32115",
+    "avatar": "💎",
+    "rating": 1230,
+    "peakRating": 1230,
+    "streak": 1,
+    "maxStreak": 1,
+    "currentLosingStreak": 0,
+    "wins": 1,
+    "losses": 0,
+    "draws": 0,
+    "matchesPlayed": 1,
+    "rankedPlayed": 1,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 60,
+    "wallsPlacedTotal": 8,
+    "wallsBrokenTotal": 2,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793890713522,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793890713538,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793890713536_0d62va"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793890713538
+      }
+    },
+    "isGuest": false,
+    "isBot": false,
+    "createdAt": 1793890713522,
+    "lastActive": 1793890713535,
+    "country": "India",
+    "processedMatchIds": [],
+    "categoryStats": {
+      "ranked": {
+        "games": 1,
+        "wins": 1,
+        "losses": 0,
+        "draws": 0,
+        "eloGain": 30
+      },
+      "casual": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0
+      },
+      "computer": {
+        "games": 1,
+        "wins": 1,
+        "losses": 0,
+        "byDifficulty": {
+          "easy": {
+            "games": 0,
+            "wins": 0
+          },
+          "medium": {
+            "games": 1,
+            "wins": 1
+          },
+          "hard": {
+            "games": 0,
+            "wins": 0
+          },
+          "impossible": {
+            "games": 0,
+            "wins": 0
+          }
+        }
+      },
+      "koth": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0
+      },
+      "breaking": {
+        "games": 1,
+        "wins": 1,
+        "losses": 0
+      }
+    },
+    "social": {
+      "google": {
+        "providerId": "g_987654321",
+        "email": "apex@gmail.com",
+        "name": "ApexVex",
+        "linkedAt": 1793890713545
+      }
+    }
+  },
+  "usr_10168_588872": {
+    "id": "usr_10168_588872",
+    "idNum": 10168,
+    "username": "noob10168",
+    "displayName": "noob10168",
+    "avatar": "💎",
+    "rating": 1200,
+    "peakRating": 1200,
+    "streak": 0,
+    "maxStreak": 0,
+    "currentLosingStreak": 0,
+    "wins": 0,
+    "losses": 0,
+    "draws": 0,
+    "matchesPlayed": 0,
+    "rankedPlayed": 0,
+    "casualPlayed": 0,
+    "aiDefeated": 0,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 0,
+    "wallsPlacedTotal": 0,
+    "wallsBrokenTotal": 0,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793890713527,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      }
+    ],
+    "achievements": {},
+    "isGuest": true,
+    "isBot": false,
+    "createdAt": 1793890713527,
+    "lastActive": 1793890713527,
+    "country": "India",
+    "processedMatchIds": [],
+    "categoryStats": {
+      "ranked": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0,
+        "eloGain": 0
+      },
+      "casual": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0
+      },
+      "computer": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0,
+        "byDifficulty": {
+          "easy": {
+            "games": 0,
+            "wins": 0
+          },
+          "medium": {
+            "games": 0,
+            "wins": 0
+          },
+          "hard": {
+            "games": 0,
+            "wins": 0
+          },
+          "impossible": {
+            "games": 0,
+            "wins": 0
+          }
+        }
+      },
+      "koth": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0
+      },
+      "breaking": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0
+      }
+    }
+  },
+  "usr_10169_dsda37": {
+    "id": "usr_10169_dsda37",
+    "idNum": 10169,
+    "username": "noob10169",
+    "displayName": "noob10169",
+    "avatar": "💎",
+    "rating": 1200,
+    "peakRating": 1230,
+    "streak": 0,
+    "maxStreak": 1,
+    "currentLosingStreak": 1,
+    "wins": 1,
+    "losses": 1,
+    "draws": 0,
+    "matchesPlayed": 2,
+    "rankedPlayed": 2,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 120,
+    "wallsPlacedTotal": 8,
+    "wallsBrokenTotal": 2,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793890713552,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793890713557,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793890713555_qe33p7"
+      },
+      {
+        "timestamp": 1793890713567,
+        "rating": 1200,
+        "delta": -30,
+        "opponent": "Bot",
+        "opponentRating": 1200,
+        "matchId": "match_1793890713565_l1ropm"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793890713557
+      }
+    },
+    "isGuest": true,
+    "isBot": false,
+    "createdAt": 1793890713552,
+    "lastActive": 1793890713565,
+    "country": "India",
+    "processedMatchIds": [],
+    "categoryStats": {
+      "ranked": {
+        "games": 2,
+        "wins": 1,
+        "losses": 1,
+        "draws": 0,
+        "eloGain": 0
+      },
+      "casual": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0
+      },
+      "computer": {
+        "games": 2,
+        "wins": 1,
+        "losses": 1,
+        "byDifficulty": {
+          "easy": {
+            "games": 0,
+            "wins": 0
+          },
+          "medium": {
+            "games": 2,
+            "wins": 1
+          },
+          "hard": {
+            "games": 0,
+            "wins": 0
+          },
+          "impossible": {
+            "games": 0,
+            "wins": 0
+          }
+        }
+      },
+      "koth": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0
+      },
+      "breaking": {
+        "games": 2,
+        "wins": 1,
+        "losses": 1
+      }
+    }
+  },
+  "usr_10170_j4ca81": {
+    "id": "usr_10170_j4ca81",
+    "idNum": 10170,
+    "username": "Vex_3197",
+    "displayName": "Vex_3197",
+    "avatar": "👑",
+    "rating": 1200,
+    "peakRating": 1230,
+    "streak": 0,
+    "maxStreak": 1,
+    "currentLosingStreak": 1,
+    "wins": 1,
+    "losses": 1,
+    "draws": 0,
+    "matchesPlayed": 2,
+    "rankedPlayed": 2,
+    "casualPlayed": 0,
+    "aiDefeated": 1,
+    "humanDefeated": 0,
+    "totalPlayTimeSec": 205,
+    "wallsPlacedTotal": 4,
+    "wallsBrokenTotal": 1,
+    "kothWins": 0,
+    "puzzlesSolvedTotal": 0,
+    "ratingHistory": [
+      {
+        "timestamp": 1793890722162,
+        "rating": 1200,
+        "delta": 0,
+        "note": "Account Created"
+      },
+      {
+        "timestamp": 1793890722188,
+        "rating": 1230,
+        "delta": 30,
+        "opponent": "noob10050",
+        "opponentRating": 1560,
+        "matchId": "match_1793890722184_uhp1eq"
+      },
+      {
+        "timestamp": 1793890722201,
+        "rating": 1200,
+        "delta": -30,
+        "opponent": "noob10080",
+        "opponentRating": 1950,
+        "matchId": "match_1793890722198_1r2erp"
+      }
+    ],
+    "achievements": {
+      "first_win": {
+        "unlocked": true,
+        "unlockedAt": 1793890722188
+      }
+    },
+    "isGuest": false,
+    "isBot": false,
+    "createdAt": 1793890722162,
+    "lastActive": 1793890722198,
+    "country": "India",
+    "processedMatchIds": [],
+    "categoryStats": {
+      "ranked": {
+        "games": 2,
+        "wins": 1,
+        "losses": 1,
+        "draws": 0,
+        "eloGain": 0
+      },
+      "casual": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0,
+        "draws": 0
+      },
+      "computer": {
+        "games": 2,
+        "wins": 1,
+        "losses": 1,
+        "byDifficulty": {
+          "easy": {
+            "games": 0,
+            "wins": 0
+          },
+          "medium": {
+            "games": 2,
+            "wins": 1
+          },
+          "hard": {
+            "games": 0,
+            "wins": 0
+          },
+          "impossible": {
+            "games": 0,
+            "wins": 0
+          }
+        }
+      },
+      "koth": {
+        "games": 0,
+        "wins": 0,
+        "losses": 0
+      },
+      "breaking": {
+        "games": 2,
+        "wins": 1,
+        "losses": 1
+      }
+    },
+    "social": {
+      "google": {
+        "providerId": "g_sub_999888",
+        "email": "vex@google.com",
+        "name": "Alex Vex",
+        "linkedAt": 1793890722177
       }
     }
   }

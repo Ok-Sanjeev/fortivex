@@ -393,6 +393,13 @@ class BarricadeUI {
     bindEvents() {
         // Independent Profile & Sign In Navigation
         this.homeUserBadge?.addEventListener('click', () => this.openProfileScreen());
+        document.getElementById('home-rank-badge')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openRanksSheet();
+        });
+        document.getElementById('home-streak-badge-container')?.addEventListener('click', () => {
+            this.openProfileScreen();
+        });
         this.homeRankBadgeIcon?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.openRanksSheet();
@@ -549,41 +556,125 @@ class BarricadeUI {
 
         // 1. Home Screen Buttons
         document.getElementById('btn-play-ranked')?.addEventListener('click', () => {
-            this.startRankedMatchmaking(this.selectedRankedMode);
+            this.startRankedMatchmaking(this.selectedRankedMode || { mode: 'classic', gameplayMode: 'normal', walls: 10, breakCost: 0 });
         });
 
-        // Featured Spotlight Actions
-        this.btnModeBreakingRanked?.addEventListener('click', () => {
-            this.startRankedMatchmaking({ mode: 'classic', gameplayMode: 'breaking', breakCost: 5, walls: 10 });
-        });
-
-        this.btnModeBreakingBot?.addEventListener('click', () => {
-            document.querySelectorAll('#bot-sheet .bot-gameplay-pill').forEach(b => {
-                b.classList.toggle('selected', b.dataset.gameplay === 'breaking');
+        // Featured Mode Cards Online / Bot actions
+        document.querySelectorAll('.btn-feat-online').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                const gp = btn.dataset.gameplay;
+                if (mode === 'koth') {
+                    this.openFriendsSheet('build', { mode: 'koth' });
+                } else {
+                    this.startRankedMatchmaking({ mode: 'classic', gameplayMode: gp, breakCost: gp === 'breaking' ? 5 : 0, walls: 10 });
+                }
             });
-            document.querySelectorAll('#bot-sheet .bot-mode-box').forEach(b => {
-                b.classList.toggle('selected', b.dataset.mode === 'classic');
+        });
+
+        document.querySelectorAll('.btn-feat-bot').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.mode;
+                const gp = btn.dataset.gameplay;
+                if (mode === 'koth') {
+                    this.isRanked = false;
+                    this.playType = 'pve';
+                    this.myPlayerRole = 1;
+                    this.ai.setDifficulty('medium');
+                    this.startNewMatch({ mode: 'koth', gameplayMode: 'breaking', breakCost: 5, initialWalls: 5, timeSec: 180 });
+                    this.showToast('👑 King of the Hill: Race to capture center crown (4,4)!');
+                } else {
+                    this.isRanked = false;
+                    this.playType = 'pve';
+                    this.myPlayerRole = 1;
+                    this.ai.setDifficulty('medium');
+                    this.startNewMatch({ mode: 'classic', gameplayMode: gp, breakCost: gp === 'breaking' ? 5 : 0, initialWalls: 10, timeSec: 180 });
+                    this.showToast(gp === 'breaking' ? '💥 Barricade Breaking vs Computer' : 'Classic Normal vs Computer');
+                }
             });
-            const costRow = document.getElementById('bot-break-cost-row');
-            if (costRow) costRow.style.display = 'flex';
-            this.botSheet?.classList.add('open');
         });
 
-        this.btnModeKothOnline?.addEventListener('click', () => {
-            this.startRankedMatchmaking({ mode: 'koth', gameplayMode: 'breaking', breakCost: 5, walls: 5 });
+        // Casual Games Actions
+        document.getElementById('btn-open-join-code')?.addEventListener('click', () => {
+            this.openFriendsSheet('join');
         });
 
-        this.btnModeKothBot?.addEventListener('click', () => {
-            this.isRanked = false;
-            this.playType = 'pve';
-            this.myPlayerRole = 1;
-            this.ai.setDifficulty('medium');
-            this.startNewMatch({ mode: 'koth', gameplayMode: 'breaking', breakCost: 5, initialWalls: 5, timeSec: 180 });
-            this.showToast('👑 King of the Hill: Race to capture center crown (4,4)!');
+        document.getElementById('btn-front-build-room')?.addEventListener('click', () => {
+            this.openFriendsSheet('build');
         });
 
-        this.btnModeNormalCard?.addEventListener('click', () => {
-            this.startRankedMatchmaking({ mode: 'classic', gameplayMode: 'normal', walls: 10, breakCost: 0 });
+        document.querySelectorAll('.casual-filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('.casual-filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                this.casualFilter = pill.dataset.filter || 'all';
+                this.fetchPublicRooms();
+            });
+        });
+
+        document.getElementById('btn-refresh-public-rooms')?.addEventListener('click', () => {
+            this.fetchPublicRooms();
+        });
+
+        document.getElementById('home-premium-banner')?.addEventListener('click', () => {
+            this.openMoreSheet();
+        });
+
+        // Mobile Bottom Navigation Bar (5 tabs)
+        document.querySelectorAll('#app-bottom-nav .nav-item').forEach(navBtn => {
+            navBtn.addEventListener('click', () => {
+                document.querySelectorAll('#app-bottom-nav .nav-item').forEach(b => b.classList.remove('active'));
+                navBtn.classList.add('active');
+                const navKey = navBtn.dataset.nav;
+                if (navKey === 'play') {
+                    this.switchView('home');
+                } else if (navKey === 'puzzles') {
+                    this.openDailyPuzzleDirectly();
+                } else if (navKey === 'leaderboard') {
+                    this.openLeaderboardSheet();
+                } else if (navKey === 'profile') {
+                    this.openProfileScreen();
+                } else if (navKey === 'more') {
+                    this.openMoreSheet();
+                }
+            });
+        });
+
+        // Leaderboard Sheet Close
+        document.getElementById('btn-close-leaderboard')?.addEventListener('click', () => {
+            document.getElementById('leaderboard-sheet')?.classList.remove('open');
+        });
+
+        // More Sheet Actions
+        document.getElementById('btn-close-more-sheet')?.addEventListener('click', () => {
+            document.getElementById('more-sheet')?.classList.remove('open');
+        });
+
+        document.getElementById('btn-more-rules')?.addEventListener('click', () => {
+            document.getElementById('more-sheet')?.classList.remove('open');
+            document.getElementById('rules-sheet')?.classList.add('open');
+        });
+
+        document.getElementById('btn-close-rules')?.addEventListener('click', () => {
+            document.getElementById('rules-sheet')?.classList.remove('open');
+        });
+
+        document.getElementById('btn-more-sound')?.addEventListener('click', () => {
+            const isMuted = sounds.toggleMute();
+            const titleEl = document.getElementById('more-sound-title');
+            const iconEl = document.getElementById('more-sound-icon');
+            if (titleEl) titleEl.textContent = `Sound Effects: ${isMuted ? 'OFF' : 'ON'}`;
+            if (iconEl) iconEl.textContent = isMuted ? '🔇' : '🔊';
+            this.showToast(`Sound Effects: ${isMuted ? 'OFF' : 'ON'}`);
+        });
+
+        document.getElementById('btn-more-watch')?.addEventListener('click', () => {
+            document.getElementById('more-sheet')?.classList.remove('open');
+            this.startWatchMode();
+        });
+
+        document.getElementById('btn-more-about')?.addEventListener('click', () => {
+            this.showToast('FORTIVEX v3.0 — The Ultimate Strategy Board Game');
         });
 
         // Front Page Custom Rooms: Build & Join
@@ -926,42 +1017,60 @@ class BarricadeUI {
     renderPublicRoomsList(rooms) {
         if (!this.publicRoomsList) return;
 
-        if (!rooms || rooms.length === 0) {
+        const countEl = document.getElementById('open-casual-count');
+        const filter = this.casualFilter || 'all';
+        const filteredRooms = (rooms || []).filter(r => {
+            if (filter === 'classic') return r.mode === 'classic' && r.gameplayMode !== 'breaking';
+            if (filter === 'breaking') return r.gameplayMode === 'breaking';
+            if (filter === 'koth') return r.mode === 'koth';
+            return true;
+        });
+        if (countEl) countEl.textContent = `${filteredRooms.length}`;
+
+        if (!filteredRooms || filteredRooms.length === 0) {
             this.publicRoomsList.innerHTML = `
                 <div class="public-rooms-empty">
                     <div class="empty-icon">🌐</div>
-                    <div class="empty-title">No Open Public Rooms</div>
-                    <div class="empty-sub">Be the first to build a public room and challenge anyone online!</div>
+                    <div class="empty-title">No Open Casual Games</div>
+                    <div class="empty-sub">Be the first to create an open room and challenge online players!</div>
                 </div>
             `;
             return;
         }
 
-        this.publicRoomsList.innerHTML = rooms.map(r => {
-            const isKoth = r.mode === 'koth';
-            const isBreaking = r.gameplayMode === 'breaking';
+        const formatTimeControl = (sec) => {
+            const m = Math.floor((sec || 180) / 60);
+            return `${m}+0`;
+        };
+
+        const headerHtml = `
+            <div class="casual-table-header">
+                <span>PLAYER</span>
+                <span>RATING</span>
+                <span>TIME</span>
+                <span></span>
+            </div>
+        `;
+
+        const rowsHtml = filteredRooms.map(r => {
+            const hostDisplay = r.hostName || r.title || `anon-${r.code.slice(0, 5)}`;
+            const ratingDisplay = r.hostRating ? `${r.hostRating}` : '—';
+            const timeDisplay = formatTimeControl(r.timeSec);
             return `
-                <div class="public-room-card" data-code="${r.code}">
-                    <div class="room-card-info">
-                        <div class="room-card-title">
-                            <span>${r.title || r.code}</span>
-                            ${r.hasPassword ? '<span title="Password Protected">🔒</span>' : ''}
-                        </div>
-                        <div class="room-card-meta">
-                            <span class="room-meta-badge ${isKoth ? 'koth' : ''}">${isKoth ? '👑 4P KOTH' : 'Classic 2P'}</span>
-                            <span class="room-meta-badge ${isBreaking ? 'breaking' : ''}">${isBreaking ? '💥 Breaking' : 'Normal'}</span>
-                            <span>⏱ ${r.timeSec}s</span>
-                            <span>👥 ${r.currentPlayers}/${r.maxPlayers}</span>
-                        </div>
-                    </div>
-                    <div class="room-card-actions">
-                        <button class="btn-join-room-card" data-code="${r.code}" data-pwd="${r.hasPassword ? '1' : '0'}">Join</button>
+                <div class="casual-room-row" data-code="${r.code}">
+                    <div class="casual-col-player">${hostDisplay}</div>
+                    <div class="casual-col-rating">${ratingDisplay}</div>
+                    <div class="casual-col-time">${timeDisplay}</div>
+                    <div class="casual-col-action">
+                        <button class="btn-join-room-orange" data-code="${r.code}" data-pwd="${r.hasPassword ? '1' : '0'}">Join</button>
                     </div>
                 </div>
             `;
         }).join('');
 
-        this.publicRoomsList.querySelectorAll('.btn-join-room-card').forEach(btn => {
+        this.publicRoomsList.innerHTML = headerHtml + rowsHtml;
+
+        this.publicRoomsList.querySelectorAll('.btn-join-room-orange').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const code = btn.dataset.code;
@@ -1834,19 +1943,29 @@ class BarricadeUI {
 
     switchView(viewName) {
         this.currentView = viewName;
+        const bottomNav = document.getElementById('app-bottom-nav');
         if (viewName === 'home') {
             this.homeView.style.display = 'flex';
             this.gameView.style.display = 'none';
             if (this.profileView) this.profileView.style.display = 'none';
+            if (bottomNav) bottomNav.style.display = 'flex';
+            document.querySelectorAll('#app-bottom-nav .nav-item').forEach(b => {
+                b.classList.toggle('active', b.dataset.nav === 'play');
+            });
             this.fetchPublicRooms();
         } else if (viewName === 'profile') {
             this.homeView.style.display = 'none';
             this.gameView.style.display = 'none';
             if (this.profileView) this.profileView.style.display = 'flex';
+            if (bottomNav) bottomNav.style.display = 'flex';
+            document.querySelectorAll('#app-bottom-nav .nav-item').forEach(b => {
+                b.classList.toggle('active', b.dataset.nav === 'profile');
+            });
         } else {
             this.homeView.style.display = 'none';
             this.gameView.style.display = 'flex';
             if (this.profileView) this.profileView.style.display = 'none';
+            if (bottomNav) bottomNav.style.display = 'none';
         }
     }
 
@@ -3086,6 +3205,54 @@ class BarricadeUI {
         }).join('');
 
         this.ranksSheet?.classList.add('open');
+    }
+
+    openLeaderboardSheet() {
+        const list = document.getElementById('leaderboard-players-list');
+        const sheet = document.getElementById('leaderboard-sheet');
+        if (!list || !sheet) return;
+
+        list.innerHTML = '<div style="text-align:center; padding: 24px; color: #94a3b8; font-size: 0.82rem;">Loading rankings...</div>';
+        sheet.classList.add('open');
+
+        fetch('/api/leaderboard')
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success || !data.leaderboard) {
+                    list.innerHTML = '<div style="text-align:center; padding: 24px; color: #ef4444; font-size: 0.82rem;">Failed to load leaderboard</div>';
+                    return;
+                }
+                list.innerHTML = data.leaderboard.map(p => {
+                    const isMe = p.username === this.username;
+                    const rankInfo = typeof getRankForRating === 'function' ? getRankForRating(p.rating) : null;
+                    const badgeSvg = rankInfo && typeof getRankBadgeSvg === 'function' ? getRankBadgeSvg(rankInfo.id, 24) : '🛡️';
+                    const rankClass = p.rank === 1 ? 'top-1' : (p.rank === 2 ? 'top-2' : (p.rank === 3 ? 'top-3' : ''));
+                    return `
+                        <div class="leaderboard-row-item ${isMe ? 'current-user' : ''}">
+                            <div class="lb-player-col">
+                                <span class="lb-rank-num ${rankClass}">#${p.rank}</span>
+                                <span class="lb-player-name">${p.displayName || p.username} ${isMe ? '(You)' : ''}</span>
+                            </div>
+                            <div class="lb-score-col">
+                                <span class="lb-tier-badge">${badgeSvg}</span>
+                                <span class="lb-rating-txt" style="color: ${rankInfo ? rankInfo.color : '#e2e8f0'}">${p.rating}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(() => {
+                list.innerHTML = '<div style="text-align:center; padding: 24px; color: #ef4444; font-size: 0.82rem;">Network error</div>';
+            });
+    }
+
+    openMoreSheet() {
+        const sheet = document.getElementById('more-sheet');
+        if (sheet) sheet.classList.add('open');
+    }
+
+    openDailyPuzzleDirectly(forceRestart = false) {
+        this.startDailyPuzzle(0, forceRestart);
     }
 
     openMatchDetailsSheet(match) {

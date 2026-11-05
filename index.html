@@ -194,20 +194,21 @@
         </div>
 
         <!-- ========================================================
-             2. HOME LOBBY SCREEN (Matches Screenshot 4)
+             2. HOME LOBBY SCREEN (Mobile-First Architecture)
              ======================================================== -->
         <div id="home-screen-view" class="home-screen-view">
-            <!-- Home Header -->
+            <!-- 1. Primary Compact Header -->
             <div class="home-top-bar">
                 <div class="home-logo-title">FORTIVEX</div>
                 <div class="home-user-badges">
                     <div id="home-user-badge" class="home-badge" title="View Player Profile & Career Stats" style="cursor: pointer;">
                         <span class="badge-icon" id="home-user-avatar">💎</span>
-                        <span id="home-rank-badge-icon" class="home-rank-badge-svg" title="Competitive Rank (Click to view tiers)"></span>
-                        <span id="home-username-text">noob10116</span>
+                        <span id="home-username-text" class="home-user-name">noob10116</span>
+                    </div>
+                    <div id="home-rank-badge" class="home-badge rank-badge-pill" title="Competitive Rank (Click to view tiers)" style="cursor: pointer;">
+                        <span id="home-rank-badge-icon" class="home-rank-badge-svg"></span>
                         <span id="home-elo-badge" class="home-elo-chip">1200</span>
                     </div>
-                    <button id="home-signin-prompt" class="btn-signin-pill" title="Claim your unique username">Sign in</button>
                     <div id="home-streak-badge-container" class="home-badge streak-badge" title="Your Personal Win Streak" style="cursor: pointer;">
                         <span class="badge-icon">🔥</span>
                         <span id="home-streak-badge">0</span>
@@ -215,158 +216,181 @@
                 </div>
             </div>
 
-            <!-- Ranked Matchmaking Hero Container with Mode Selector Pills -->
-            <div class="ranked-hero-container">
-                <div class="ranked-mode-pills-row">
-                    <button class="ranked-mode-pill active" data-mode="classic" data-gameplay="normal" data-cost="0">
-                        <span class="pill-emoji">🧱</span> Classic Normal
+            <!-- 2. Primary Full-Width "Play Ranked" Action -->
+            <button id="btn-play-ranked" class="btn-play-ranked-primary" title="Online Competitive Ranked Matchmaking">
+                <div class="btn-ranked-content">
+                    <div class="btn-ranked-title-row">
+                        <svg class="ranked-play-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <span>Play Ranked</span>
+                    </div>
+                    <div id="btn-ranked-sub-text" class="btn-ranked-sub">Live online 1v1 matchmaking · Rating Elo (+30 / -30)</div>
+                </div>
+            </button>
+
+            <!-- 3. Quick Game Modes Grid (Matches Reference: 2 on row 1, 3 on row 2) -->
+            <div class="home-quick-modes-grid">
+                <!-- Row 1: 2 items -->
+                <div class="quick-modes-row-top">
+                    <button id="btn-vs-computer" class="quick-mode-btn" title="Challenge 4 AI difficulties">
+                        <svg class="quick-mode-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
+                        </svg>
+                        <div class="quick-mode-text-col">
+                            <span class="quick-mode-title">vs Computer</span>
+                            <span class="quick-mode-sub">4 AI difficulties</span>
+                        </div>
                     </button>
-                    <button class="ranked-mode-pill" data-mode="classic" data-gameplay="breaking" data-cost="5">
-                        <span class="pill-emoji">💥</span> Breaking (1v1)
-                    </button>
-                    <button class="ranked-mode-pill" data-mode="koth" data-gameplay="breaking" data-cost="5">
-                        <span class="pill-emoji">👑</span> King of Hill (4P)
+
+                    <button id="btn-play-friends" class="quick-mode-btn" title="Host or join custom rooms with friends">
+                        <svg class="quick-mode-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
+                        </svg>
+                        <div class="quick-mode-text-col">
+                            <span class="quick-mode-title">Play with Friends</span>
+                            <span class="quick-mode-sub">Host or join room</span>
+                        </div>
                     </button>
                 </div>
-                <button id="btn-play-ranked" class="btn-play-ranked" title="Online Competitive Ranked Matchmaking">
-                    <div class="btn-ranked-title">
-                        <span>▶ Play Ranked</span>
+
+                <!-- Row 2: 3 items -->
+                <div class="quick-modes-row-bottom">
+                    <button id="btn-puzzles-mode" class="quick-mode-tile" title="Solve daily tactical challenges">
+                        <svg class="quick-tile-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5s-1.12-2.5-2.5-2.5z"/>
+                        </svg>
+                        <span class="quick-tile-title">Puzzles</span>
+                    </button>
+
+                    <button id="btn-local-play" class="quick-mode-tile" title="Pass & Play on this device">
+                        <svg class="quick-tile-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                        </svg>
+                        <span class="quick-tile-title">Local</span>
+                    </button>
+
+                    <button id="btn-watch-mode" class="quick-mode-tile" title="Spectate live ongoing matches">
+                        <svg class="quick-tile-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+                        </svg>
+                        <span class="quick-tile-title">Watch</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4. Online Presence Strip (Matches Reference Screenshot) -->
+            <div class="home-presence-strip">
+                <span class="presence-pulse-dot"></span>
+                <span id="stat-online-players" class="presence-stat-txt">101 players online</span>
+                <span class="presence-sep">·</span>
+                <span id="stat-active-matches" class="presence-stat-txt">0 in game</span>
+            </div>
+
+            <!-- 5. Open Casual Games Card (Matches Reference Screenshot) -->
+            <div class="casual-games-container-card">
+                <div class="casual-games-header-row">
+                    <div class="casual-header-left">
+                        <span class="casual-section-title">OPEN CASUAL GAMES (<span id="open-casual-count">0</span>)</span>
+                        <span class="casual-section-sub">Unranked · won't affect your rating</span>
                     </div>
-                    <div id="btn-ranked-sub-text" class="btn-ranked-sub">Live online 1v1 matchmaking · Classic Normal (10 Walls)</div>
+                    <button id="btn-open-join-code" class="btn-text-join-code" title="Join with room code">Join with code</button>
+                </div>
+
+                <!-- Casual Filter Pills -->
+                <div class="casual-filters-bar">
+                    <button class="casual-filter-pill active" data-filter="all">All</button>
+                    <button class="casual-filter-pill" data-filter="classic">Classic</button>
+                    <button class="casual-filter-pill" data-filter="breaking">Breaking</button>
+                    <button class="casual-filter-pill" data-filter="koth">King of Hill</button>
+                    <button id="btn-refresh-public-rooms" class="btn-refresh-casual-icon" title="Refresh available rooms">
+                        <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    </button>
+                </div>
+
+                <!-- Dynamic Public Casual Rooms Table List -->
+                <div id="public-rooms-list" class="casual-rooms-list">
+                    <div class="public-rooms-empty">
+                        <div class="empty-icon">🌐</div>
+                        <div class="empty-title">No Open Casual Games</div>
+                        <div class="empty-sub">Be the first to create an open room and challenge online players!</div>
+                    </div>
+                </div>
+
+                <!-- Create Room Action (Inside Casual Games Card) -->
+                <button id="btn-front-build-room" class="btn-casual-create-room" title="Host a public or private room">
+                    <span>+ Create Room</span>
                 </button>
             </div>
 
-            <!-- SEPARATE GAME MODES -->
-            <div class="front-modes-section">
-                <div class="front-section-header">FEATURED MODES</div>
-                
-                <!-- Spotlight 1: Barricade Breaking Mode -->
-                <div class="mode-spotlight-card card-breaking-spotlight">
-                    <div class="spotlight-badge-row">
-                        <span class="spotlight-tag breaking-tag">💥 SIGNATURE MODE</span>
-                        <span class="spotlight-meta">Break Cost: 5 Walls</span>
+            <!-- Fortivex Pro / Competitive Pass Banner (Matches Screenshot 5) -->
+            <div id="home-premium-banner" class="home-premium-banner" title="Explore competitive features">
+                <div class="premium-banner-left">
+                    <span class="premium-diamond-icon">💎</span>
+                    <div class="premium-text-col">
+                        <span class="premium-title">Fortivex Pro Competitive</span>
+                        <span class="premium-sub">Pure Elo progression · Unlimited tactical puzzles · Anti-cheat</span>
                     </div>
-                    <div class="spotlight-title-row">
-                        <div class="spotlight-title">Barricade Breaking (1v1)</div>
-                        <div class="spotlight-desc">Sacrifice 5 barricades to shatter opposing walls into walkable rubble. Dynamic tactical combat.</div>
+                </div>
+                <span class="premium-chevron">›</span>
+            </div>
+
+            <!-- 6. Featured Game Modes (Compact & Informative) -->
+            <div class="featured-modes-section">
+                <div class="front-section-header">FEATURED GAME MODES</div>
+
+                <!-- Card 1: Classic Normal -->
+                <div class="featured-mode-card card-classic">
+                    <div class="feat-card-badge-row">
+                        <span class="feat-tag tag-classic">TRADITIONAL 1V1</span>
+                        <span class="feat-meta">10 Walls · Unbreakable</span>
                     </div>
-                    <div class="spotlight-actions-row">
-                        <button id="btn-mode-breaking-ranked" class="btn-spotlight-play">
-                            <span>▶ Play Ranked</span>
+                    <div class="feat-title">Classic Normal</div>
+                    <div class="feat-desc">Race your pawn across the board using unbreakable barricades to divert and trap your opponent. Pure strategic calculation.</div>
+                    <div class="feat-actions-row">
+                        <button class="btn-feat-action btn-feat-online" data-mode="classic" data-gameplay="normal">
+                            <span>🌐 Play Online</span>
                         </button>
-                        <button id="btn-mode-breaking-bot" class="btn-spotlight-sub">
-                            <span>🤖 vs Bot</span>
+                        <button class="btn-feat-action btn-feat-bot" data-mode="classic" data-gameplay="normal">
+                            <span>🤖 vs Computer</span>
                         </button>
                     </div>
                 </div>
 
-                <!-- Spotlight 2: 4-Player King of the Hill -->
-                <div class="mode-spotlight-card card-koth-spotlight">
-                    <div class="spotlight-badge-row">
-                        <span class="spotlight-tag koth-tag">👑 4-PLAYER RACE</span>
-                        <span class="spotlight-meta">5 Walls Each</span>
+                <!-- Card 2: Barricade Breaking -->
+                <div class="featured-mode-card card-breaking">
+                    <div class="feat-card-badge-row">
+                        <span class="feat-tag tag-breaking">💥 SIGNATURE MODE</span>
+                        <span class="feat-meta">Break Cost: 5 Walls</span>
                     </div>
-                    <div class="spotlight-title-row">
-                        <div class="spotlight-title">King of the Hill (4P)</div>
-                        <div class="spotlight-desc">4 players spawn on all 4 borders racing to conquer the center crown square at (4,4). Pure spatial mayhem.</div>
-                    </div>
-                    <div class="spotlight-actions-row">
-                        <button id="btn-mode-koth-online" class="btn-spotlight-play">
+                    <div class="feat-title">Barricade Breaking (1v1)</div>
+                    <div class="feat-desc">Sacrifice 5 barricades to shatter opposing walls into walkable rubble. Dynamic breakthroughs, high risk, and aggressive spatial control.</div>
+                    <div class="feat-actions-row">
+                        <button class="btn-feat-action btn-feat-online" data-mode="classic" data-gameplay="breaking">
                             <span>🌐 Play Online</span>
                         </button>
-                        <button id="btn-mode-koth-bot" class="btn-spotlight-sub">
+                        <button class="btn-feat-action btn-feat-bot" data-mode="classic" data-gameplay="breaking">
+                            <span>🤖 vs Computer</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 3: King of the Hill (4P) -->
+                <div class="featured-mode-card card-koth">
+                    <div class="feat-card-badge-row">
+                        <span class="feat-tag tag-koth">👑 4-PLAYER ROYALTY</span>
+                        <span class="feat-meta">5 Walls · 4-Way FFA</span>
+                    </div>
+                    <div class="feat-title">King of the Hill (4P)</div>
+                    <div class="feat-desc">4 players spawn on all 4 board edges racing to conquer the center crown square at (4,4). High-intensity multiplayer battle royale.</div>
+                    <div class="feat-actions-row">
+                        <button class="btn-feat-action btn-feat-online" data-mode="koth" data-gameplay="normal">
+                            <span>👑 Host 4P Room</span>
+                        </button>
+                        <button class="btn-feat-action btn-feat-bot" data-mode="koth" data-gameplay="normal">
                             <span>🤖 vs 3 Bots</span>
                         </button>
                     </div>
-                </div>
-
-                <!-- Additional Game Modes Subgrid -->
-                <div class="front-section-header" style="margin-top: 14px;">MORE MODES</div>
-                <div class="modes-subgrid">
-                    <div id="btn-mode-normal-card" class="mode-subcard" title="Traditional 10 unbreakable walls">
-                        <div class="subcard-icon">🧱</div>
-                        <div class="subcard-title">Classic Normal</div>
-                        <div class="subcard-desc">10 Unbreakable Walls</div>
-                    </div>
-
-                    <div id="btn-play-bot" class="mode-subcard" title="Challenge 4 AI difficulties">
-                        <div class="subcard-icon">🤖</div>
-                        <div class="subcard-title">vs Computer</div>
-                        <div class="subcard-desc">Easy · Med · Hard · Apex</div>
-                    </div>
-
-                    <div id="btn-puzzles-mode" class="mode-subcard card-puzzles" title="Solve today's tactical puzzle">
-                        <div class="subcard-icon">🧩</div>
-                        <div class="subcard-title">Daily Puzzles</div>
-                        <div class="subcard-desc">3 Daily Challenges</div>
-                    </div>
-
-                    <div id="btn-local-play" class="mode-subcard" title="Pass and play on this device">
-                        <div class="subcard-icon">📱</div>
-                        <div class="subcard-title">Pass & Play</div>
-                        <div class="subcard-desc">2P or 4P Local Duel</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2. CUSTOM MULTIPLAYER ROOMS (Positioned below Main Game Modes) -->
-            <div class="front-room-section">
-                <div class="front-section-header">CUSTOM MULTIPLAYER ROOMS</div>
-                <div class="front-room-grid">
-                    <button id="btn-front-build-room" class="btn-front-room-build">
-                        <span class="front-room-icon">🏠</span>
-                        <div>
-                            <div class="front-room-btn-title">Build Room</div>
-                            <div class="front-room-btn-sub">Host 2P or 4P KOTH</div>
-                        </div>
-                    </button>
-                    <div class="front-room-join-card">
-                        <div class="front-join-label">JOIN VIA CODE</div>
-                        <div class="front-join-row">
-                            <input type="text" id="front-join-room-input" class="front-join-input" placeholder="FORT-1234" maxlength="10">
-                            <button id="btn-front-join-room-action" class="btn-front-join-submit">Join</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. PUBLIC CUSTOM ROOM BROWSER -->
-            <div class="public-rooms-section">
-                <div class="public-rooms-header-row">
-                    <div class="front-section-header" style="margin-bottom: 0;">PUBLIC ROOMS</div>
-                    <button id="btn-refresh-public-rooms" class="btn-refresh-rooms-icon" title="Refresh public room list">
-                        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
-                    </button>
-                </div>
-
-                <!-- Filter Pills -->
-                <div class="public-room-filters">
-                    <button class="public-filter-pill active" data-filter="all">All</button>
-                    <button class="public-filter-pill" data-filter="classic">Classic (2P)</button>
-                    <button class="public-filter-pill" data-filter="koth">King of Hill (4P)</button>
-                    <button class="public-filter-pill" data-filter="breaking">Breaking</button>
-                    <button class="public-filter-pill" data-filter="normal">Normal</button>
-                </div>
-
-                <!-- Dynamic Room List -->
-                <div id="public-rooms-list" class="public-rooms-list">
-                    <div class="public-rooms-empty">
-                        <div class="empty-icon">🌐</div>
-                        <div class="empty-title">No Open Public Rooms</div>
-                        <div class="empty-sub">Be the first to build a public room and challenge anyone online!</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- UNIFIED ONLINE STATISTICS -->
-            <div class="platform-stats-footer">
-                <div class="platform-stat-item">
-                    <span class="stat-indicator-dot online"></span>
-                    <span id="stat-online-players">101 players online</span>
-                </div>
-                <span class="stat-sep">·</span>
-                <div class="platform-stat-item">
-                    <span id="stat-active-matches">0 in games</span>
                 </div>
             </div>
         </div>
@@ -1415,6 +1439,138 @@
                 </div>
             </div>
         </div>
+
+        <!-- ========================================================
+             12. LEADERBOARD BOTTOM SHEET
+             ======================================================== -->
+        <div id="leaderboard-sheet" class="modal-bottom-sheet-overlay">
+            <div class="sheet-container-card leaderboard-sheet-modal">
+                <div class="sheet-handle-bar"></div>
+                <div class="sheet-header-title">
+                    <span>🏆 Global Leaderboard</span>
+                    <button id="btn-close-leaderboard" class="sheet-close-x close-modal-trigger">&times;</button>
+                </div>
+                <div class="leaderboard-header-row">
+                    <span>RANK / PLAYER</span>
+                    <span>TIER / RATING</span>
+                </div>
+                <div id="leaderboard-players-list" class="leaderboard-players-list">
+                    <!-- Populated dynamically from /api/leaderboard -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             13. MORE OPTIONS BOTTOM SHEET
+             ======================================================== -->
+        <div id="more-sheet" class="modal-bottom-sheet-overlay">
+            <div class="sheet-container-card more-sheet-modal">
+                <div class="sheet-handle-bar"></div>
+                <div class="sheet-header-title">
+                    <span>More Options</span>
+                    <button id="btn-close-more-sheet" class="sheet-close-x close-modal-trigger">&times;</button>
+                </div>
+                <div class="more-options-grid">
+                    <button id="btn-more-rules" class="more-option-card">
+                        <span class="more-option-icon">📜</span>
+                        <div class="more-option-info">
+                            <div class="more-option-title">Game Rules & Guide</div>
+                            <div class="more-option-sub">Movement, Wall Placement & Rubble</div>
+                        </div>
+                    </button>
+                    <button id="btn-more-sound" class="more-option-card">
+                        <span class="more-option-icon" id="more-sound-icon">🔊</span>
+                        <div class="more-option-info">
+                            <div class="more-option-title" id="more-sound-title">Sound Effects: ON</div>
+                            <div class="more-option-sub">Tap to toggle audio mute</div>
+                        </div>
+                    </button>
+                    <button id="btn-more-watch" class="more-option-card">
+                        <span class="more-option-icon">📺</span>
+                        <div class="more-option-info">
+                            <div class="more-option-title">Spectate Matches</div>
+                            <div class="more-option-sub">Watch live high-Elo battles</div>
+                        </div>
+                    </button>
+                    <button id="btn-more-about" class="more-option-card">
+                        <span class="more-option-icon">🛡️</span>
+                        <div class="more-option-info">
+                            <div class="more-option-title">About Fortivex v3.0</div>
+                            <div class="more-option-sub">Authoritative competitive strategy engine</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             14. GAME RULES BOTTOM SHEET
+             ======================================================== -->
+        <div id="rules-sheet" class="modal-bottom-sheet-overlay">
+            <div class="sheet-container-card rules-sheet-modal">
+                <div class="sheet-handle-bar"></div>
+                <div class="sheet-header-title">
+                    <span>📜 Fortivex Rules & Strategy</span>
+                    <button id="btn-close-rules" class="sheet-close-x close-modal-trigger">&times;</button>
+                </div>
+                <div class="rules-scroll-content">
+                    <div class="rule-section">
+                        <h4>1. Objective</h4>
+                        <p><strong>Classic 1v1:</strong> The first player whose pawn reaches any square on the opponent's starting baseline wins.</p>
+                        <p><strong>King of the Hill (4P):</strong> The first player to reach the central crown square at <strong>(4,4)</strong> wins immediately.</p>
+                    </div>
+                    <div class="rule-section">
+                        <h4>2. Turn Actions</h4>
+                        <p>On your turn, you must take exactly ONE action:</p>
+                        <ul>
+                            <li><strong>Move your pawn:</strong> Move 1 square orthogonally (North, South, East, West). Jump over adjacent pawns!</li>
+                            <li><strong>Place a barricade:</strong> Place a 2-space wall (Horizontal or Vertical) between tiles.</li>
+                            <li><strong>Break a wall (Breaking mode):</strong> Spend 5 barricades from your inventory to destroy an existing wall. The rubble is permanently walkable!</li>
+                        </ul>
+                    </div>
+                    <div class="rule-section">
+                        <h4>3. The Fair-Play Rule</h4>
+                        <p>You may <strong>never completely block</strong> a player's path to their goal. At least one legal path must always remain open.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             9. MOBILE BOTTOM NAVIGATION (Section 9)
+             ======================================================== -->
+        <nav id="app-bottom-nav" class="app-bottom-nav">
+            <button class="nav-item active" data-nav="play" title="Play">
+                <svg viewBox="0 0 24 24" class="nav-icon" width="22" height="22">
+                    <path fill="currentColor" d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/>
+                </svg>
+                <span class="nav-label">Play</span>
+            </button>
+            <button class="nav-item" data-nav="puzzles" title="Puzzles">
+                <svg viewBox="0 0 24 24" class="nav-icon" width="22" height="22">
+                    <path fill="currentColor" d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5s-1.12-2.5-2.5-2.5z"/>
+                </svg>
+                <span class="nav-label">Puzzles</span>
+            </button>
+            <button class="nav-item" data-nav="leaderboard" title="Leaderboard">
+                <svg viewBox="0 0 24 24" class="nav-icon" width="22" height="22">
+                    <path fill="currentColor" d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/>
+                </svg>
+                <span class="nav-label">Leaderboard</span>
+            </button>
+            <button class="nav-item" data-nav="profile" title="Profile">
+                <svg viewBox="0 0 24 24" class="nav-icon" width="22" height="22">
+                    <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <span class="nav-label">Profile</span>
+            </button>
+            <button class="nav-item" data-nav="more" title="More">
+                <svg viewBox="0 0 24 24" class="nav-icon" width="22" height="22">
+                    <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                </svg>
+                <span class="nav-label">More</span>
+            </button>
+        </nav>
 
         <!-- Floating Touch Drag Follower for Mobile Finger Drag -->
         <div id="touch-floating-wall" class="touch-floating-wall"></div>
