@@ -3251,10 +3251,6 @@ class BarricadeUI {
         if (sheet) sheet.classList.add('open');
     }
 
-    openDailyPuzzleDirectly(forceRestart = false) {
-        this.startDailyPuzzle(0, forceRestart);
-    }
-
     openMatchDetailsSheet(match) {
         const content = document.getElementById('match-details-content');
         if (!content) return;

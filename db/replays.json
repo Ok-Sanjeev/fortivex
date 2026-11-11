@@ -634,5 +634,47 @@
       }
     ],
     "history": []
+  },
+  "match_1794393105580_utyq8h": {
+    "matchId": "match_1794393105580_utyq8h",
+    "initialState": {
+      "mode": "classic",
+      "walls": 10
+    },
+    "moves": [
+      {
+        "player": 1,
+        "move": {
+          "type": "move",
+          "x": 4,
+          "y": 7
+        }
+      }
+    ],
+    "history": []
+  },
+  "match_1794393115579_s7c3a8": {
+    "matchId": "match_1794393115579_s7c3a8",
+    "initialState": {
+      "p1": {
+        "x": 4,
+        "y": 8
+      },
+      "p2": {
+        "x": 4,
+        "y": 0
+      }
+    },
+    "moves": [
+      {
+        "type": "move",
+        "player": 1,
+        "to": {
+          "x": 4,
+          "y": 7
+        }
+      }
+    ],
+    "history": []
   }
 }
