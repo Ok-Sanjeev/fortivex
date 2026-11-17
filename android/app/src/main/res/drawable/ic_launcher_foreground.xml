@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Golden Fortivex Fortress Shield -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M54,28 L76,38 L76,62 C76,75 54,84 54,84 C54,84 32,75 32,62 L32,38 Z"/>
+    <!-- Inner Dark Accent -->
+    <path
+        android:fillColor="#090D16"
+        android:pathData="M54,34 L70,42 L70,60 C70,70 54,77 54,77 C54,77 38,70 38,60 L38,42 Z"/>
+    <!-- Golden Crown Barricade Core -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M44,48 L48,56 L54,50 L60,56 L64,48 L64,64 L44,64 Z"/>
+</vector>

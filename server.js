@@ -23,6 +23,7 @@ const BarricadeGame = require('./game.js');
 const db = require('./db.js');
 const { AI_PROFILES, getAiProfileForRating } = require('./ai_profiles.js');
 const { FORTIVEX_RANKS, getRankBadgeSvg, getRankForRating } = require('./ranks.js');
+const { verifyGoogleIdToken } = require('./auth_google.js');
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -189,8 +190,83 @@ function createServerRoom({
     if (!roomSockets.has(code)) {
         roomSockets.set(code, new Set());
     }
+
+    // Persist active room state for crash recovery
+    db.persistActiveRoom(code, serializeRoomForPersistence(room));
+
     return room;
 }
+
+function serializeRoomForPersistence(room) {
+    if (!room) return null;
+    return {
+        code: room.code,
+        title: room.title,
+        isPublic: room.isPublic,
+        password: room.password,
+        hasPassword: !!room.password,
+        hostName: room.hostName,
+        hostUserId: room.hostUserId,
+        hostRating: room.hostRating,
+        settings: room.settings,
+        maxPlayers: room.maxPlayers,
+        p1: room.p1,
+        p2: room.p2,
+        p3: room.p3,
+        p4: room.p4,
+        playerUserIds: room.playerUserIds,
+        status: room.status,
+        moves: room.moves,
+        createdAt: room.createdAt,
+        lastUpdate: room.lastUpdate,
+        isRanked: room.isRanked,
+        isBotMatch: room.isBotMatch,
+        botProfile: room.botProfile,
+        spectators: room.spectators || 0,
+        timers: room.timers,
+        gameState: room.game ? room.game.serialize() : null
+    };
+}
+
+function restoreActiveRoomsFromPersistence() {
+    try {
+        const persisted = db.loadActiveRooms();
+        const codes = Object.keys(persisted);
+        if (codes.length > 0) {
+            console.log(`[Fortivex Recovery] Restoring ${codes.length} active rooms from persistent storage...`);
+            for (const code of codes) {
+                const r = persisted[code];
+                if (!r || (r.status !== 'playing' && r.status !== 'waiting')) continue;
+
+                const game = new BarricadeGame({
+                    gameMode: r.settings?.mode || 'classic',
+                    gameplayMode: r.settings?.gameplayMode || 'normal',
+                    breakCost: (r.settings?.gameplayMode === 'breaking') ? (r.settings?.breakCost || 5) : 0,
+                    initialWalls: r.settings?.walls || (r.settings?.mode === 'koth' ? 5 : 10),
+                    timeControl: { initialSec: r.settings?.timeSec || 180, incrementSec: 2 }
+                });
+
+                if (r.gameState) {
+                    game.deserialize(r.gameState);
+                }
+
+                const restoredRoom = {
+                    ...r,
+                    game,
+                    disconnectGrace: null
+                };
+
+                activeRooms.set(code, restoredRoom);
+                if (!roomSockets.has(code)) {
+                    roomSockets.set(code, new Set());
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[Fortivex Recovery] Error restoring active rooms:', e);
+    }
+}
+restoreActiveRoomsFromPersistence();
 
 function broadcastToRoom(roomCode, message, excludeWs = null) {
     const sockets = roomSockets.get(roomCode);
@@ -327,7 +403,68 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // 3. Centralized Identity: Social Login Mock / Endpoint
+    // 3. Genuine Google OAuth 2.0 Token Verification & Account Binding
+    if (req.method === 'POST' && reqPath === '/api/auth/google') {
+        parseJsonBody(req, async (err, data) => {
+            const token = (data && (data.idToken || data.credential || data.token));
+            if (!token) {
+                return sendJson(res, 400, { success: false, reason: 'Missing Google ID token' });
+            }
+            try {
+                const verification = await verifyGoogleIdToken(token);
+                if (!verification.valid) {
+                    return sendJson(res, 401, { success: false, reason: verification.error || 'Invalid Google token' });
+                }
+
+                const { googleId, email, name, avatar } = verification.user;
+                let user = db.getUserBySocial('google', googleId);
+                if (!user && data.userId) {
+                    user = db.bindSocialAccount(data.userId, 'google', googleId, email, name);
+                }
+                if (!user) {
+                    user = db.createGuestUser();
+                    user = db.bindSocialAccount(user.id, 'google', googleId, email, name);
+                }
+
+                if (avatar && (!user.avatar || user.avatar === '💎')) {
+                    user.avatar = avatar;
+                }
+
+                const sessionToken = db.createSession(user.id);
+                user.sessionToken = sessionToken;
+                db.saveUsers();
+
+                return sendJson(res, 200, {
+                    success: true,
+                    user,
+                    token: sessionToken
+                });
+            } catch (authErr) {
+                return sendJson(res, 500, { success: false, reason: 'Authentication verification failed: ' + authErr.message });
+            }
+        });
+        return;
+    }
+
+    // 3b. Centralized Logout & Session Revocation
+    if (req.method === 'POST' && reqPath === '/api/auth/logout') {
+        parseJsonBody(req, (err, data) => {
+            const authHeader = req.headers['authorization'];
+            let token = null;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                token = authHeader.slice(7).trim();
+            } else if (data && data.token) {
+                token = data.token;
+            }
+            if (token) {
+                db.invalidateSessionToken(token);
+            }
+            sendJson(res, 200, { success: true });
+        });
+        return;
+    }
+
+    // 3c. Centralized Identity: Social Login Mock / Endpoint
     if (req.method === 'POST' && reqPath === '/api/auth/social') {
         parseJsonBody(req, (err, data) => {
             if (err || !data.provider || !data.providerId) {
@@ -953,6 +1090,9 @@ function finalizeRoomMatch(room, winnerRole, winReason) {
         eloUpdates
     };
 
+    // Remove finished match from crash recovery store
+    db.removeActiveRoom(room.code);
+
     broadcastToRoom(room.code, {
         type: 'match_finished',
         roomCode: room.code,
@@ -1010,6 +1150,9 @@ function applyAuthoritativeMove(room, playerRole, move) {
     let matchFinalResult = null;
     if (room.game.winner) {
         matchFinalResult = finalizeRoomMatch(room, room.game.winner, room.game.winReason);
+    } else {
+        // Persist updated game state for crash recovery
+        db.persistActiveRoom(room.code, serializeRoomForPersistence(room));
     }
 
     // Broadcast verified move to all room members over WebSockets
@@ -1060,6 +1203,10 @@ wss.on('connection', (ws, req) => {
                 const room = activeRooms.get(code);
                 if (!room) {
                     return ws.send(JSON.stringify({ type: 'error', reason: 'Room not found' }));
+                }
+
+                if (room.password && room.password !== data.password) {
+                    return ws.send(JSON.stringify({ type: 'error', reason: 'Incorrect room password' }));
                 }
 
                 clientSession.clientId = data.clientId;
@@ -1134,7 +1281,13 @@ wss.on('connection', (ws, req) => {
                 const room = activeRooms.get(code);
                 if (!room) return ws.send(JSON.stringify({ type: 'move_error', reason: 'Room not found' }));
 
-                const result = applyAuthoritativeMove(room, data.player || clientSession.role, data.move);
+                if (clientSession.isSpectator || !clientSession.role) {
+                    return ws.send(JSON.stringify({ type: 'move_error', reason: 'Spectators cannot make moves' }));
+                }
+
+                // Strictly enforce session role to eliminate role spoofing
+                const playerRole = clientSession.role;
+                const result = applyAuthoritativeMove(room, playerRole, data.move);
                 if (!result.success) {
                     ws.send(JSON.stringify({ type: 'move_error', reason: result.reason }));
                 }

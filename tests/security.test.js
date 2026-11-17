@@ -91,6 +91,46 @@ it('Username claim strictly forbids illegal characters and duplicates', () => {
     assert.strictEqual(dupRes.success, false, 'Duplicate username must be rejected');
 });
 
+// 4. Google OAuth Token Verification & Security
+it('Google OAuth token verification rejects malformed and unsigned tokens', async () => {
+    const { verifyGoogleIdToken } = require('../auth_google.js');
+    
+    // Malformed token
+    const malformed = await verifyGoogleIdToken('not.a.valid.jwt');
+    assert.strictEqual(malformed.valid, false);
+
+    // Empty token
+    const empty = await verifyGoogleIdToken('');
+    assert.strictEqual(empty.valid, false);
+
+    // Forged unsigned token
+    const fakePayload = Buffer.from(JSON.stringify({ iss: 'https://accounts.google.com', exp: Math.floor(Date.now() / 1000) + 3600, aud: 'fake_aud' })).toString('base64');
+    const fakeHeader = Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'fake_kid' })).toString('base64');
+    const forged = await verifyGoogleIdToken(`${fakeHeader}.${fakePayload}.fakesig`);
+    assert.strictEqual(forged.valid, false, 'Forged token without verified JWKS signature must be rejected');
+});
+
+// 5. Active Match Persistence & Crash Recovery
+it('Active match can be persisted and restored from crash recovery store', () => {
+    const testCode = 'FORT-TEST-' + Math.floor(Math.random() * 10000);
+    const roomData = {
+        code: testCode,
+        status: 'playing',
+        moves: [{ type: 'move', x: 4, y: 7 }],
+        turn: 2
+    };
+
+    db.persistActiveRoom(testCode, roomData);
+    const loaded = db.loadActiveRooms();
+    assert(loaded[testCode], 'Room must exist in loaded active rooms');
+    assert.strictEqual(loaded[testCode].moves.length, 1);
+    assert.strictEqual(loaded[testCode].turn, 2);
+
+    db.removeActiveRoom(testCode);
+    const afterRemove = db.loadActiveRooms();
+    assert.strictEqual(afterRemove[testCode], undefined, 'Room must be removed from store after match finalization');
+});
+
 console.log('====================================================');
 console.log(`Security tests completed. Passed: ${passed}, Failed: ${failed}`);
 console.log('====================================================\n');

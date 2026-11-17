@@ -19,6 +19,7 @@ const MATCHES_FILE = path.join(DB_DIR, 'matches.json');
 const REPLAYS_FILE = path.join(DB_DIR, 'replays.json');
 const META_FILE = path.join(DB_DIR, 'meta.json');
 const SESSIONS_FILE = path.join(DB_DIR, 'sessions.json');
+const ACTIVE_ROOMS_FILE = path.join(DB_DIR, 'active_rooms.json');
 
 // Ensure DB directory exists
 if (!fs.existsSync(DB_DIR)) {
@@ -36,9 +37,11 @@ function safeReadJson(filePath, defaultVal) {
     }
 }
 
+// Atomic file write with unique process/timestamp temp file
 function safeWriteJson(filePath, data) {
     try {
-        const tempPath = `${filePath}.tmp.${Date.now()}`;
+        const rand = crypto.randomBytes(4).toString('hex');
+        const tempPath = `${filePath}.tmp.${Date.now()}_${rand}`;
         fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), 'utf8');
         fs.renameSync(tempPath, filePath);
     } catch (e) {
@@ -78,6 +81,7 @@ class FortivexDB {
         this.matches = safeReadJson(MATCHES_FILE, []);
         this.replays = safeReadJson(REPLAYS_FILE, {});
         this.sessions = safeReadJson(SESSIONS_FILE, {});
+        this.activeRooms = safeReadJson(ACTIVE_ROOMS_FILE, {});
         this.meta = safeReadJson(META_FILE, {
             nextUserId: 10101
         });
@@ -102,8 +106,47 @@ class FortivexDB {
         safeWriteJson(SESSIONS_FILE, this.sessions);
     }
 
+    saveActiveRooms() {
+        safeWriteJson(ACTIVE_ROOMS_FILE, this.activeRooms);
+    }
+
     saveMeta() {
         safeWriteJson(META_FILE, this.meta);
+    }
+
+    // ==========================================
+    // ACTIVE ROOM PERSISTENCE & CRASH RECOVERY
+    // ==========================================
+    persistActiveRoom(code, roomData) {
+        if (!code || !roomData) return;
+        this.activeRooms[code] = {
+            ...roomData,
+            persistedAt: Date.now()
+        };
+        this.saveActiveRooms();
+    }
+
+    removeActiveRoom(code) {
+        if (code && this.activeRooms[code]) {
+            delete this.activeRooms[code];
+            this.saveActiveRooms();
+        }
+    }
+
+    loadActiveRooms() {
+        this.activeRooms = safeReadJson(ACTIVE_ROOMS_FILE, {});
+        return this.activeRooms;
+    }
+
+    getUserBySocial(provider, providerId) {
+        if (!provider || !providerId) return null;
+        for (const u of Object.values(this.users)) {
+            if (u.social && u.social[provider] && u.social[provider].providerId === providerId) {
+                this.ensureUserFields(u);
+                return u;
+            }
+        }
+        return null;
     }
 
     // ==========================================

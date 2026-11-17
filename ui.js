@@ -14,6 +14,45 @@
  * - Real Server Online & In-Game Counters via Heartbeat
  */
 
+// ==========================================
+// UNIVERSAL API & WEBSOCKET ORIGIN RESOLVER
+// ==========================================
+const FORTIVEX_CLOUD_BACKEND = 'https://fortivex.onrender.com';
+
+function getFortivexApiBase() {
+    if (typeof window !== 'undefined' && window.FORTIVEX_SERVER_URL) {
+        return window.FORTIVEX_SERVER_URL.replace(/\/+$/, '');
+    }
+    if (typeof window !== 'undefined' && window.location) {
+        const proto = window.location.protocol;
+        const host = window.location.host;
+        if (host && host !== '' && (proto === 'http:' || proto === 'https:')) {
+            return `${proto}//${host}`;
+        }
+    }
+    return FORTIVEX_CLOUD_BACKEND;
+}
+
+function getFortivexWsUrl() {
+    const apiBase = getFortivexApiBase();
+    if (apiBase.startsWith('https:')) {
+        return apiBase.replace(/^https:/, 'wss:');
+    } else {
+        return apiBase.replace(/^http:/, 'ws:');
+    }
+}
+
+// Intercept fetch for seamless relative /api/ support in native Android environments
+if (typeof window !== 'undefined' && window.fetch) {
+    const _nativeFetch = window.fetch.bind(window);
+    window.fetch = function(resource, init) {
+        if (typeof resource === 'string' && resource.startsWith('/api/')) {
+            resource = getFortivexApiBase() + resource;
+        }
+        return _nativeFetch(resource, init);
+    };
+}
+
 class BarricadeUI {
     constructor() {
         this.game = new BarricadeGame();
@@ -150,8 +189,7 @@ class BarricadeUI {
             return;
         }
 
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}`;
+        const wsUrl = getFortivexWsUrl();
 
         try {
             this.ws = new WebSocket(wsUrl);
