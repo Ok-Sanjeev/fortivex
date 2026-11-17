@@ -1,0 +1,8 @@
+<resources>
+    <color name="fortivex_bg">#090D16</color>
+    <color name="fortivex_surface">#141C2E</color>
+    <color name="fortivex_primary">#22C55E</color>
+    <color name="fortivex_accent">#F59E0B</color>
+    <color name="fortivex_status_bar">#090D16</color>
+    <color name="fortivex_nav_bar">#090D16</color>
+</resources>

@@ -1,0 +1,64 @@
+name: Build Android Release Bundle (AAB & APK)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android App Bundle & APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Node Dependencies & Run Tests
+        run: |
+          npm ci || npm install
+          npm test
+
+      - name: Prepare Web Assets for Android
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp -r index.html styles.css game.js ui.js audio.js ranks.js icons/ android/app/src/main/assets/ || true
+
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x android/gradlew
+
+      - name: Build Android App Bundle (AAB) & APK
+        working-directory: android
+        run: |
+          ./gradlew bundleRelease assembleRelease --no-daemon
+
+      - name: Upload Release Android App Bundle (.aab)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fortivex-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 14
+
+      - name: Upload Release APK (.apk)
+        uses: actions/upload-artifact@v4
+        with:
+          name: fortivex-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 14

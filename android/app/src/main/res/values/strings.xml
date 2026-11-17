@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">FORTIVEX</string>
+    <string name="exit_confirm_title">Exit Fortivex?</string>
+    <string name="exit_confirm_message">Are you sure you want to exit the game?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+</resources>

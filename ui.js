@@ -158,9 +158,18 @@ class BarricadeUI {
 
             this.ws.onopen = () => {
                 console.log('⚡ Connected to FORTIVEX Real-Time WebSocket Server');
+                if (this.offlineBanner) {
+                    this.offlineBanner.classList.add('reconnected');
+                    if (this.offlineText) this.offlineText.textContent = '✅ Connected to Fortivex Cloud';
+                    setTimeout(() => {
+                        this.offlineBanner.style.display = 'none';
+                        this.offlineBanner.classList.remove('reconnected');
+                    }, 2000);
+                }
+
                 if (this.playType === 'online_pvp' && this.activeRoomCode) {
                     this.ws.send(JSON.stringify({
-                        type: 'join_room',
+                        type: 'reconnect_room',
                         code: this.activeRoomCode,
                         role: this.myPlayerRole,
                         username: this.username,
@@ -179,7 +188,11 @@ class BarricadeUI {
             };
 
             this.ws.onclose = () => {
-                setTimeout(() => this.initWebSocket(), 3000);
+                if (this.offlineBanner) {
+                    this.offlineBanner.style.display = 'flex';
+                    if (this.offlineText) this.offlineText.textContent = '⚠️ Connection Interrupted — Reconnecting...';
+                }
+                setTimeout(() => this.initWebSocket(), 2500);
             };
         } catch (e) {
             console.warn('WebSocket init fallback to polling:', e);
@@ -193,7 +206,11 @@ class BarricadeUI {
             if (data.player !== this.myPlayerRole) {
                 this.applyRemoteMove(data.move);
             }
+            if (data.timers) {
+                this.syncTimersFromServer(data.timers);
+            }
             if (data.winner) {
+                if (this.opponentDisconnectOverlay) this.opponentDisconnectOverlay.style.display = 'none';
                 this.handleMatchEnd(data.winner, data.winReason);
             }
         } else if (data.type === 'chat_broadcast') {
@@ -211,6 +228,48 @@ class BarricadeUI {
                     timeSec: this.selectedRoomTime || 180
                 });
             }
+        } else if (data.type === 'player_disconnected') {
+            if (this.opponentDisconnectOverlay && this.game && !this.game.winner) {
+                this.opponentDisconnectOverlay.style.display = 'flex';
+                let remainingSec = data.graceSeconds || 45;
+                if (this.disconnectTimerSec) this.disconnectTimerSec.textContent = remainingSec;
+                if (this.disconnectInterval) clearInterval(this.disconnectInterval);
+                this.disconnectInterval = setInterval(() => {
+                    remainingSec--;
+                    if (this.disconnectTimerSec) this.disconnectTimerSec.textContent = Math.max(0, remainingSec);
+                    if (remainingSec <= 0) {
+                        clearInterval(this.disconnectInterval);
+                    }
+                }, 1000);
+            }
+        } else if (data.type === 'player_reconnected') {
+            if (this.opponentDisconnectOverlay) {
+                this.opponentDisconnectOverlay.style.display = 'none';
+                if (this.disconnectInterval) clearInterval(this.disconnectInterval);
+            }
+            this.showToast(`Player ${data.username} reconnected!`);
+        } else if (data.type === 'room_reconnected') {
+            if (this.opponentDisconnectOverlay) this.opponentDisconnectOverlay.style.display = 'none';
+            if (data.timers) this.syncTimersFromServer(data.timers);
+            this.showToast('Reconnected to live match!');
+        } else if (data.type === 'match_finished') {
+            if (this.opponentDisconnectOverlay) this.opponentDisconnectOverlay.style.display = 'none';
+            if (this.disconnectInterval) clearInterval(this.disconnectInterval);
+            this.handleMatchEnd(data.winner, data.winReason);
+        }
+    }
+
+    syncTimersFromServer(timers) {
+        if (!timers) return;
+        if (timers[1] !== undefined && this.p1Clock) {
+            const m1 = Math.floor(timers[1] / 60);
+            const s1 = timers[1] % 60;
+            this.p1Clock.textContent = `${m1}:${s1 < 10 ? '0' : ''}${s1}`;
+        }
+        if (timers[2] !== undefined && this.p2Clock) {
+            const m2 = Math.floor(timers[2] / 60);
+            const s2 = timers[2] % 60;
+            this.p2Clock.textContent = `${m2}:${s2 < 10 ? '0' : ''}${s2}`;
         }
     }
 
@@ -235,6 +294,20 @@ class BarricadeUI {
         this.dailyCompleteSheet = document.getElementById('daily-complete-sheet');
         this.matchmakingOverlay = document.getElementById('matchmaking-overlay');
         this.roomLobbyOverlay = document.getElementById('room-lobby-overlay');
+
+        // Offline Banner & Disconnect Overlays
+        this.offlineBanner = document.getElementById('offline-banner');
+        this.offlineText = document.getElementById('offline-text');
+        this.opponentDisconnectOverlay = document.getElementById('opponent-disconnect-overlay');
+        this.disconnectTimerSec = document.getElementById('disconnect-timer-sec');
+
+        // Transparent Bot Opt-In Elements
+        this.mmBotOptInBox = document.getElementById('mm-bot-optin-box');
+        this.btnMmOptInBot = document.getElementById('btn-mm-optin-bot');
+        this.btnMmKeepSearching = document.getElementById('btn-mm-keep-searching');
+
+        // Account Deletion Button (Google Play)
+        this.btnDeleteAccountTrigger = document.getElementById('btn-delete-account-trigger');
 
         // Profile Nav & Buttons
         this.btnProfileBack = document.getElementById('btn-profile-back');
@@ -945,6 +1018,31 @@ class BarricadeUI {
             });
         });
 
+        // Bot Opt-in during Ranked Matchmaking
+        this.btnMmOptInBot?.addEventListener('click', () => this.optInBotMatch());
+        this.btnMmKeepSearching?.addEventListener('click', () => {
+            if (this.mmBotOptInBox) this.mmBotOptInBox.style.display = 'none';
+        });
+
+        // Google Play Account Deletion
+        this.btnDeleteAccountTrigger?.addEventListener('click', () => this.deleteUserAccount());
+
+        // Global Network State Listeners
+        window.addEventListener('online', () => {
+            console.log('🌐 Online event detected');
+            this.initWebSocket();
+        });
+        window.addEventListener('offline', () => {
+            console.log('⚠️ Offline event detected');
+            if (this.offlineBanner) {
+                this.offlineBanner.style.display = 'flex';
+                if (this.offlineText) this.offlineText.textContent = '⚠️ Network Disconnected — Reconnecting to Fortivex...';
+            }
+        });
+
+        // Android Hardware Back Button Hook
+        window.handleAndroidBackButton = () => this.onAndroidBack();
+
         window.addEventListener('resize', () => this.renderWalls());
     }
 
@@ -1204,16 +1302,125 @@ class BarricadeUI {
                     if (data.matched) {
                         clearInterval(this.matchmakingPollInterval);
                         clearInterval(this.matchmakingDurationInterval);
+                        if (this.mmBotOptInBox) this.mmBotOptInBox.style.display = 'none';
                         this.handleRankedMatchFound(data);
+                    } else if (data.canOptInBot) {
+                        if (this.mmBotOptInBox) this.mmBotOptInBox.style.display = 'block';
                     }
                 })
                 .catch(() => {});
         }, 1000);
     }
 
+    optInBotMatch() {
+        if (this.mmBotOptInBox) this.mmBotOptInBox.style.display = 'none';
+        const mode = (this.selectedRankedMode && this.selectedRankedMode.mode) || 'classic';
+        const gameplayMode = (this.selectedRankedMode && this.selectedRankedMode.gameplayMode) || 'breaking';
+        const breakCost = (this.selectedRankedMode && this.selectedRankedMode.breakCost) || 5;
+
+        fetch('/api/matchmaking/optin-bot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                clientId: this.clientId,
+                userId: this.userId,
+                username: this.username,
+                rating: this.userRating,
+                mode,
+                gameplayMode,
+                breakCost
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.matched) {
+                this.handleRankedMatchFound(data);
+            }
+        })
+        .catch(err => {
+            console.error('Error opting in bot:', err);
+        });
+    }
+
+    deleteUserAccount() {
+        const confirmed = window.confirm('Are you sure you want to permanently delete your Fortivex account and all associated rank data? This action cannot be undone.');
+        if (!confirmed) return;
+
+        fetch('/api/auth/delete-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: this.userId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                localStorage.clear();
+                alert('Your Fortivex account and all personal data have been completely deleted.');
+                window.location.reload();
+            } else {
+                alert('Account deletion failed: ' + (data.reason || 'Unknown error'));
+            }
+        })
+        .catch(err => {
+            alert('Failed to connect to server: ' + err.message);
+        });
+    }
+
+    onAndroidBack() {
+        // 1. Check open bottom sheets / modal overlays
+        const openSheets = [
+            this.ranksSheet,
+            this.createGameSheet,
+            this.friendsSheet,
+            this.puzzlesSheet,
+            this.chatSheet,
+            this.gameOverSheet,
+            this.signInSheet,
+            this.editProfileSheet,
+            this.matchDetailsSheet,
+            this.dailyCompleteSheet
+        ];
+        for (const sheet of openSheets) {
+            if (sheet && sheet.classList.contains('open')) {
+                sheet.classList.remove('open');
+                return true;
+            }
+        }
+
+        // 2. Matchmaking search overlay
+        if (this.matchmakingOverlay && this.matchmakingOverlay.style.display !== 'none') {
+            this.cancelMatchmaking();
+            return true;
+        }
+
+        // 3. Room lobby overlay
+        if (this.roomLobbyOverlay && this.roomLobbyOverlay.style.display !== 'none') {
+            this.closeRoomLobby();
+            return true;
+        }
+
+        // 4. In active game screen
+        if (this.gameView && this.gameView.style.display !== 'none') {
+            const leave = window.confirm('Leave current match and return to lobby?');
+            if (leave) {
+                this.returnToHomeLobby();
+            }
+            return true;
+        }
+
+        // 5. In profile screen
+        if (this.profileView && this.profileView.style.display !== 'none') {
+            this.switchView('home');
+            return true;
+        }
+
+        return false; // Handled by native Android app (exit dialog)
+    }
+
     handleRankedMatchFound(data) {
         clearInterval(this.matchmakingPollInterval);
         clearInterval(this.matchmakingDurationInterval);
+        if (this.mmBotOptInBox) this.mmBotOptInBox.style.display = 'none';
 
         this.setMatchmakingStage(4);
         if (this.mmQueueStatus) this.mmQueueStatus.textContent = 'Opponent matched!';
@@ -1222,7 +1429,7 @@ class BarricadeUI {
 
         this.activeRoomCode = data.roomCode;
         this.myPlayerRole = data.role || 1;
-        this.opponentName = data.opponent.username; // Strictly noobXXXXX
+        this.opponentName = data.opponent.displayName || data.opponent.username;
         this.opponentRating = data.opponent.rating;
         this.isRanked = true;
         this.isOpponentAi = !!data.opponent.isBot;
@@ -1245,7 +1452,7 @@ class BarricadeUI {
                 if (this.vsP1Rating) this.vsP1Rating.textContent = `${this.userRating} ELO`;
                 if (this.vsP2Name) this.vsP2Name.textContent = this.opponentName;
                 if (this.vsP2Rating) this.vsP2Rating.textContent = `${this.opponentRating} ELO`;
-                if (this.vsP2Badge) this.vsP2Badge.textContent = 'OPPONENT';
+                if (this.vsP2Badge) this.vsP2Badge.textContent = data.opponent.isBot ? 'PRACTICE BOT' : 'HUMAN OPPONENT';
             }
 
             let countdown = 2;

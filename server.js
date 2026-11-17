@@ -47,10 +47,27 @@ const activeRooms = new Map();    // roomCode -> Room Object
 const roomSockets = new Map();    // roomCode -> Set of { ws, clientId, username, role, isSpectator }
 
 // Ranked Matchmaking Queue
-const rankedQueue = [];           // Array of { clientId, userId, username, rating, joinedAt }
+const rankedQueue = [];           // Array of { clientId, userId, username, rating, mode, gameplayMode, breakCost, joinedAt, canOptInBot }
 const matchedPairs = new Map();   // clientId -> match payload
 
-// Clean inactive sessions & handle matchmaking fallback every 2 seconds
+// Simple In-Memory IP Rate Limiter
+const ipRequestCounts = new Map();
+function checkRateLimit(ip) {
+    const now = Date.now();
+    let record = ipRequestCounts.get(ip);
+    if (!record || now - record.resetTime > 60000) {
+        record = { count: 1, resetTime: now };
+        ipRequestCounts.set(ip, record);
+        return true;
+    }
+    record.count++;
+    if (record.count > 240) { // 240 requests/min max
+        return false;
+    }
+    return true;
+}
+
+// Clean inactive sessions & flag bot opt-in eligibility after 15s wait
 setInterval(() => {
     const now = Date.now();
 
@@ -69,54 +86,49 @@ setInterval(() => {
         }
     }
 
-    // 3. Ranked Matchmaking AI Pool Fallback:
-    // If a human has waited >= 5 seconds and no human opponent arrived,
-    // automatically select an available AI profile from the 100-bot database!
-    for (let i = rankedQueue.length - 1; i >= 0; i--) {
-        const item = rankedQueue[i];
-        if (now - item.joinedAt >= 5000) {
-            rankedQueue.splice(i, 1);
-            const botProfile = db.getAiProfileForMatch(item.rating);
-            const roomCode = 'FORT-R' + Math.floor(1000 + Math.random() * 9000);
-
-            const room = createServerRoom({
-                code: roomCode,
-                title: `Ranked Match: ${item.username} vs ${botProfile.username}`,
-                isPublic: false,
-                hostName: item.username,
-                hostUserId: item.userId,
-                hostRating: item.rating,
-                settings: {
-                    mode: item.mode || 'classic',
-                    gameplayMode: item.gameplayMode || 'normal',
-                    breakCost: item.breakCost || 0,
-                    timeSec: 180,
-                    walls: (item.mode === 'koth') ? 5 : 10,
-                    isRanked: true
-                },
-                p1: item.username,
-                p2: botProfile.username, // Strictly noobXXXXX
-                isBotMatch: true,
-                botProfile
-            });
-
-            matchedPairs.set(item.clientId, {
-                matched: true,
-                roomCode,
-                role: 1,
-                settings: room.settings,
-                opponent: {
-                    username: botProfile.username, // Strictly noobXXXXX
-                    rating: botProfile.rating,
-                    avatar: botProfile.avatar || '💎',
-                    isBot: true, // Internal execution flag for engine
-                    difficulty: botProfile.difficulty,
-                    playstyle: botProfile.playstyle
-                }
-            });
+    // 3. Human-First Ranked Matchmaking:
+    // If a player has waited >= 15 seconds with no matching human opponent,
+    // flag canOptInBot = true so the client can present an EXPLICIT choice to the user:
+    // "Practice vs Fortivex AI (Ranked Practice Bot)" or "Keep Searching".
+    // DO NOT deceptively force a bot match!
+    for (const item of rankedQueue) {
+        if (now - item.joinedAt >= 15000) {
+            item.canOptInBot = true;
         }
     }
 }, 2000);
+
+// ==========================================
+// SERVER-AUTHORITATIVE TURN CLOCKS & GRACE TIMER (1s LOOP)
+// ==========================================
+setInterval(() => {
+    const now = Date.now();
+    for (const [code, room] of activeRooms.entries()) {
+        if (room.status !== 'playing' || !room.game || room.game.winner) continue;
+
+        // 1. Tick current player's clock
+        const currentTurn = room.game.turn;
+        if (room.timers && room.timers[currentTurn] !== undefined) {
+            room.timers[currentTurn] = Math.max(0, room.timers[currentTurn] - 1);
+
+            // Timeout check
+            if (room.timers[currentTurn] <= 0) {
+                const loserRole = currentTurn;
+                const winnerRole = (loserRole === 1) ? 2 : 1;
+                finalizeRoomMatch(room, winnerRole, `Time out (Player ${loserRole} ran out of time)`);
+                continue;
+            }
+        }
+
+        // 2. Disconnect Grace Period Check (45s grace period)
+        if (room.disconnectGrace && now >= room.disconnectGrace.expiresAt) {
+            const disconnectedRole = room.disconnectGrace.role;
+            const winnerRole = (disconnectedRole === 1) ? 2 : 1;
+            finalizeRoomMatch(room, winnerRole, `Opponent disconnected (Abandonment timeout)`);
+            room.disconnectGrace = null;
+        }
+    }
+}, 1000);
 
 function createServerRoom({
     code,
@@ -134,13 +146,14 @@ function createServerRoom({
 }) {
     const mode = settings.mode || 'classic';
     const maxPlayers = mode === 'koth' ? 4 : 2;
+    const initialTime = settings.timeSec || 180;
 
     const game = new BarricadeGame({
         gameMode: mode,
         gameplayMode: settings.gameplayMode || 'normal',
         breakCost: (settings.gameplayMode === 'breaking') ? (settings.breakCost || 5) : 0,
         initialWalls: settings.walls || (mode === 'koth' ? 5 : 10),
-        timeControl: { initialSec: settings.timeSec || 180, incrementSec: 2 }
+        timeControl: { initialSec: initialTime, incrementSec: 2 }
     });
 
     const room = {
@@ -167,7 +180,9 @@ function createServerRoom({
         isRanked: !!settings.isRanked,
         isBotMatch,
         botProfile,
-        spectators: 0
+        spectators: 0,
+        timers: { 1: initialTime, 2: initialTime, 3: initialTime, 4: initialTime },
+        disconnectGrace: null
     };
 
     activeRooms.set(code, room);
@@ -249,6 +264,11 @@ const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url, true);
     const reqPath = parsedUrl.pathname;
 
+    // Rate Limiting Protection
+    if (!checkRateLimit(clientIp)) {
+        return sendJson(res, 429, { error: 'Rate limit exceeded. Please wait a moment.' });
+    }
+
     if (req.method === 'OPTIONS') {
         res.writeHead(204, {
             'Access-Control-Allow-Origin': '*',
@@ -259,11 +279,38 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // Health Endpoint for Cloud Deployment & Monitoring
+    if (req.method === 'GET' && reqPath === '/health') {
+        return sendJson(res, 200, {
+            status: 'healthy',
+            uptime: Math.round(process.uptime()),
+            memory: process.memoryUsage().rss,
+            activeRooms: activeRooms.size,
+            activeClients: activeClients.size,
+            timestamp: Date.now()
+        });
+    }
+
     // 1. Centralized Identity: Guest Creation
     if (req.method === 'POST' && reqPath === '/api/auth/guest') {
         parseJsonBody(req, (err, data) => {
             const user = db.createGuestUser();
             sendJson(res, 200, { success: true, user });
+        });
+        return;
+    }
+
+    // 1b. Google Play Data Safety & Account Deletion Compliance
+    if (req.method === 'POST' && reqPath === '/api/auth/delete-account') {
+        parseJsonBody(req, (err, data) => {
+            if (err || !data.userId) return sendJson(res, 400, { success: false, reason: 'Missing userId' });
+            for (let i = rankedQueue.length - 1; i >= 0; i--) {
+                if (rankedQueue[i].userId === data.userId) {
+                    rankedQueue.splice(i, 1);
+                }
+            }
+            const result = db.deleteUserAccount(data.userId);
+            sendJson(res, result.success ? 200 : 404, result);
         });
         return;
     }
@@ -560,7 +607,7 @@ const server = http.createServer((req, res) => {
                     opponent: { username: opp.username, rating: opp.rating, isBot: false }
                 });
             } else {
-                rankedQueue.push({ clientId, userId, username, rating, mode, gameplayMode, breakCost, joinedAt: Date.now() });
+                rankedQueue.push({ clientId, userId, username, rating, mode, gameplayMode, breakCost, joinedAt: Date.now(), canOptInBot: false });
                 return sendJson(res, 200, { matched: false, queueLength: rankedQueue.length });
             }
         });
@@ -574,7 +621,10 @@ const server = http.createServer((req, res) => {
                 matchedPairs.delete(clientId);
                 return sendJson(res, 200, { matched: true, ...matchInfo });
             }
-            return sendJson(res, 200, { matched: false, queueLength: rankedQueue.length });
+            const item = rankedQueue.find(q => q.clientId === clientId);
+            const waitSec = item ? Math.floor((Date.now() - item.joinedAt) / 1000) : 0;
+            const canOptInBot = item ? !!item.canOptInBot : false;
+            return sendJson(res, 200, { matched: false, queueLength: rankedQueue.length, waitSec, canOptInBot });
         };
 
         if (req.method === 'POST') {
@@ -585,6 +635,61 @@ const server = http.createServer((req, res) => {
         } else {
             handlePoll(parsedUrl.query.clientId);
         }
+        return;
+    }
+
+    // Explicit User Choice to practice against clearly labeled AI bot
+    if (req.method === 'POST' && reqPath === '/api/matchmaking/optin-bot') {
+        parseJsonBody(req, (err, data) => {
+            if (err || !data.clientId) return sendJson(res, 400, { error: 'Missing clientId' });
+            const idx = rankedQueue.findIndex(q => q.clientId === data.clientId);
+            let item;
+            if (idx !== -1) {
+                item = rankedQueue.splice(idx, 1)[0];
+            } else {
+                item = data;
+            }
+            const botProfile = db.getAiProfileForMatch(item.rating || 1200);
+            const roomCode = 'FORT-R' + Math.floor(1000 + Math.random() * 9000);
+            const room = createServerRoom({
+                code: roomCode,
+                title: `Practice Match: ${item.username} vs [AI] ${botProfile.username}`,
+                isPublic: false,
+                hostName: item.username,
+                hostUserId: item.userId,
+                hostRating: item.rating || 1200,
+                settings: {
+                    mode: item.mode || 'classic',
+                    gameplayMode: item.gameplayMode || 'normal',
+                    breakCost: item.breakCost || 0,
+                    timeSec: 180,
+                    walls: (item.mode === 'koth') ? 5 : 10,
+                    isRanked: true
+                },
+                p1: item.username,
+                p2: botProfile.username,
+                isBotMatch: true,
+                botProfile
+            });
+
+            const matchInfo = {
+                matched: true,
+                roomCode,
+                role: 1,
+                settings: room.settings,
+                opponent: {
+                    username: botProfile.username,
+                    displayName: `${botProfile.username} (AI Bot)`,
+                    rating: botProfile.rating,
+                    avatar: botProfile.avatar || '🤖',
+                    isBot: true,
+                    difficulty: botProfile.difficulty,
+                    playstyle: botProfile.playstyle
+                }
+            };
+            matchedPairs.set(item.clientId, matchInfo);
+            sendJson(res, 200, matchInfo);
+        });
         return;
     }
 
@@ -790,12 +895,86 @@ const server = http.createServer((req, res) => {
 // ==========================================
 // SERVER-AUTHORITATIVE ENGINE VALIDATION
 // ==========================================
+function finalizeRoomMatch(room, winnerRole, winReason) {
+    if (room.status === 'finished') return null;
+    room.status = 'finished';
+    room.game.winner = winnerRole;
+    room.game.winReason = winReason;
+    room.lastUpdate = Date.now();
+
+    // Record Ranked progression (+30 Win / -30 Loss)
+    let eloUpdates = {};
+    if (room.isRanked) {
+        for (let p = 1; p <= room.maxPlayers; p++) {
+            const uId = room.playerUserIds[p];
+            if (uId) {
+                const isWin = (p === winnerRole);
+                const update = db.recordMatchResult(uId, isWin);
+                if (update) eloUpdates[p] = update;
+            }
+        }
+
+        // Update persistent AI rating if bot match
+        if (room.isBotMatch && room.botProfile) {
+            const isBotWin = (winnerRole === 2);
+            db.recordAiMatchResult(room.botProfile.username, isBotWin, isBotWin ? 30 : -30);
+        }
+    }
+
+    // Save match and replay to persistent DB
+    const savedMatch = db.saveMatch({
+        roomCode: room.code,
+        mode: room.settings.mode || 'classic',
+        gameplayMode: room.settings.gameplayMode || 'breaking',
+        breakCost: room.settings.breakCost || 5,
+        isRanked: room.isRanked,
+        players: [
+            { role: 1, username: room.p1, userId: room.playerUserIds[1] },
+            { role: 2, username: room.p2, userId: room.playerUserIds[2] }
+        ],
+        winner: winnerRole,
+        winReason: winReason,
+        moveCount: room.moves.length,
+        durationSec: Math.round((Date.now() - room.createdAt) / 1000),
+        replay: {
+            initialState: {
+                mode: room.settings.mode,
+                walls: room.settings.walls
+            },
+            moves: room.moves,
+            history: room.game.history
+        }
+    });
+
+    const matchFinalResult = {
+        winner: winnerRole,
+        winReason: winReason,
+        matchId: savedMatch.id,
+        eloUpdates
+    };
+
+    broadcastToRoom(room.code, {
+        type: 'match_finished',
+        roomCode: room.code,
+        winner: winnerRole,
+        winReason: winReason,
+        matchFinalResult
+    });
+
+    return matchFinalResult;
+}
+
 function applyAuthoritativeMove(room, playerRole, move) {
     if (room.game.winner) {
         return { success: false, reason: 'Match already finished' };
     }
     if (room.game.turn !== playerRole) {
         return { success: false, reason: `Not your turn (Current turn: P${room.game.turn})` };
+    }
+
+    // Protection against duplicate replayed move
+    if (move.clientMoveIndex !== undefined && move.clientMoveIndex < room.moves.length) {
+        return { success: false, reason: 'Duplicate move already executed' };
     }
 
     let result = { success: false };
@@ -813,6 +992,11 @@ function applyAuthoritativeMove(room, playerRole, move) {
         return { success: false, reason: result.reason || 'Illegal move' };
     }
 
+    // Turn clock increment (+2s for completing legal move)
+    if (room.timers && room.timers[playerRole] !== undefined) {
+        room.timers[playerRole] += 2;
+    }
+
     const moveRecord = {
         player: playerRole,
         move,
@@ -822,61 +1006,10 @@ function applyAuthoritativeMove(room, playerRole, move) {
     room.moves.push(moveRecord);
     room.lastUpdate = Date.now();
 
-    // Check if match ended
+    // Check if match ended by goal reached
     let matchFinalResult = null;
     if (room.game.winner) {
-        room.status = 'finished';
-
-        // Record Ranked progression (+30 Win / -30 Loss)
-        let eloUpdates = {};
-        if (room.isRanked) {
-            for (let p = 1; p <= room.maxPlayers; p++) {
-                const uId = room.playerUserIds[p];
-                if (uId) {
-                    const isWin = (p === room.game.winner);
-                    const update = db.recordMatchResult(uId, isWin);
-                    if (update) eloUpdates[p] = update;
-                }
-            }
-
-            // Update persistent AI rating if bot match
-            if (room.isBotMatch && room.botProfile) {
-                const isBotWin = (room.game.winner === 2);
-                db.recordAiMatchResult(room.botProfile.username, isBotWin, isBotWin ? 30 : -30);
-            }
-        }
-
-        // Save match and replay to persistent DB
-        const savedMatch = db.saveMatch({
-            roomCode: room.code,
-            mode: room.settings.mode || 'classic',
-            gameplayMode: room.settings.gameplayMode || 'breaking',
-            breakCost: room.settings.breakCost || 5,
-            isRanked: room.isRanked,
-            players: [
-                { role: 1, username: room.p1, userId: room.playerUserIds[1] },
-                { role: 2, username: room.p2, userId: room.playerUserIds[2] }
-            ],
-            winner: room.game.winner,
-            winReason: room.game.winReason,
-            moveCount: room.moves.length,
-            durationSec: Math.round((Date.now() - room.createdAt) / 1000),
-            replay: {
-                initialState: {
-                    mode: room.settings.mode,
-                    walls: room.settings.walls
-                },
-                moves: room.moves,
-                history: room.game.history
-            }
-        });
-
-        matchFinalResult = {
-            winner: room.game.winner,
-            winReason: room.game.winReason,
-            matchId: savedMatch.id,
-            eloUpdates
-        };
+        matchFinalResult = finalizeRoomMatch(room, room.game.winner, room.game.winReason);
     }
 
     // Broadcast verified move to all room members over WebSockets
@@ -887,6 +1020,7 @@ function applyAuthoritativeMove(room, playerRole, move) {
         move,
         moveIndex: room.moves.length,
         turn: room.game.turn,
+        timers: room.timers,
         winner: room.game.winner,
         winReason: room.game.winReason,
         matchFinalResult
@@ -945,13 +1079,53 @@ wss.on('connection', (ws, req) => {
                     type: 'room_joined',
                     room: serializeRoom(room),
                     state: room.game.serialize(),
-                    moves: room.moves
+                    moves: room.moves,
+                    timers: room.timers
                 }));
 
                 broadcastToRoom(code, {
                     type: 'presence_update',
                     spectators: room.spectators || 0
                 });
+            }
+
+            // 1b. Reconnect to ongoing match after network interruption
+            else if (data.type === 'reconnect_room') {
+                const code = (data.code || '').toUpperCase();
+                const room = activeRooms.get(code);
+                if (!room) {
+                    return ws.send(JSON.stringify({ type: 'reconnect_error', reason: 'Room expired or not found' }));
+                }
+
+                const role = parseInt(data.role, 10);
+                clientSession.clientId = data.clientId;
+                clientSession.roomCode = code;
+                clientSession.role = role;
+                clientSession.username = data.username || (role === 1 ? room.p1 : room.p2);
+
+                if (!roomSockets.has(code)) roomSockets.set(code, new Set());
+                roomSockets.get(code).add(clientSession);
+
+                // Cancel disconnect grace if matching role reconnected!
+                if (room.disconnectGrace && room.disconnectGrace.role === role) {
+                    room.disconnectGrace = null;
+                }
+
+                ws.send(JSON.stringify({
+                    type: 'room_reconnected',
+                    room: serializeRoom(room),
+                    state: room.game.serialize(),
+                    moves: room.moves,
+                    timers: room.timers,
+                    turn: room.game.turn,
+                    status: room.status
+                }));
+
+                broadcastToRoom(code, {
+                    type: 'player_reconnected',
+                    role,
+                    username: clientSession.username
+                }, ws);
             }
 
             // 2. Authoritative Move
@@ -1002,8 +1176,24 @@ wss.on('connection', (ws, req) => {
             if (sockets) {
                 sockets.delete(clientSession);
                 const room = activeRooms.get(clientSession.roomCode);
-                if (room && clientSession.isSpectator) {
-                    room.spectators = Math.max(0, (room.spectators || 1) - 1);
+                if (room) {
+                    if (clientSession.isSpectator) {
+                        room.spectators = Math.max(0, (room.spectators || 1) - 1);
+                    } else if (room.status === 'playing' && !room.game.winner && !room.isBotMatch) {
+                        // Start 45-second reconnect grace period
+                        room.disconnectGrace = {
+                            role: clientSession.role,
+                            username: clientSession.username,
+                            expiresAt: Date.now() + 45000
+                        };
+                        broadcastToRoom(clientSession.roomCode, {
+                            type: 'player_disconnected',
+                            role: clientSession.role,
+                            username: clientSession.username,
+                            graceSeconds: 45
+                        });
+                        return;
+                    }
                 }
                 broadcastToRoom(clientSession.roomCode, {
                     type: 'player_left',
@@ -1014,6 +1204,39 @@ wss.on('connection', (ws, req) => {
         }
     });
 });
+
+// Graceful Process Termination
+function gracefulShutdown(signal) {
+    console.log(`\nReceived ${signal}. Gracefully shutting down Fortivex server...`);
+    for (const [code, sockets] of roomSockets.entries()) {
+        for (const client of sockets) {
+            if (client.ws.readyState === WebSocket.OPEN) {
+                try {
+                    client.ws.send(JSON.stringify({ type: 'server_shutdown', message: 'Server restarting' }));
+                    client.ws.close(1001, 'Server shutting down');
+                } catch (e) {}
+            }
+        }
+    }
+    try {
+        db.saveUsers();
+        db.saveMatches();
+        db.saveReplays();
+        db.saveSessions();
+    } catch (e) {
+        console.error('Error saving DB during shutdown:', e);
+    }
+    server.close(() => {
+        console.log('HTTP and WebSocket server closed.');
+        process.exit(0);
+    });
+    setTimeout(() => {
+        process.exit(0);
+    }, 3000);
+}
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 server.listen(PORT, HOST, () => {
     console.log('====================================================');

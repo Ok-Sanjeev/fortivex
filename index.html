@@ -35,12 +35,29 @@
 </head>
 <body>
 
+    <!-- Connection Status Banner -->
+    <div id="offline-banner" class="offline-banner" style="display: none;">
+        <span class="offline-icon">⚠️</span>
+        <span id="offline-text">Connection Interrupted — Reconnecting to Fortivex...</span>
+    </div>
+
     <div class="app-screen">
 
         <!-- ========================================================
              1. IN-GAME VIEW (Screenshots 2 & 3)
              ======================================================== -->
         <div id="game-screen-view" class="game-screen-view" style="display: none;">
+
+            <!-- Opponent Disconnection Grace Overlay -->
+            <div id="opponent-disconnect-overlay" class="opponent-disconnect-overlay" style="display: none;">
+                <div class="disconnect-card">
+                    <div class="disconnect-icon-spin">⏳</div>
+                    <h3>Opponent Disconnected</h3>
+                    <p>Waiting for player to reconnect...</p>
+                    <div class="disconnect-countdown"><span id="disconnect-timer-sec">45</span>s</div>
+                    <div class="disconnect-subtext">You will be awarded the victory if opponent does not return.</div>
+                </div>
+            </div>
 
             <!-- Top Nav Bar -->
             <div class="game-top-nav">
@@ -828,6 +845,16 @@
                         <!-- Populated dynamically -->
                     </div>
                 </div>
+
+                <!-- Google Play Compliance: Account Deletion & Data Safety -->
+                <div class="profile-account-management-card">
+                    <div class="account-mgmt-title">ACCOUNT & DATA SAFETY</div>
+                    <div class="account-mgmt-desc">In compliance with Google Play Store data safety guidelines, you can permanently delete your player profile, rating history, and match records at any time.</div>
+                    <div class="account-mgmt-actions">
+                        <a href="/privacy.html" target="_blank" class="btn-privacy-policy-link">📄 Privacy Policy</a>
+                        <button id="btn-delete-account-trigger" class="btn-delete-account-danger">🗑️ Delete Account & Data</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -892,6 +919,15 @@
                     <div id="mm-stage-5" class="mm-stage-row">
                         <span class="mm-stage-dot"></span>
                         <span class="mm-stage-text">5. Initializing game board</span>
+                    </div>
+                </div>
+
+                <!-- Transparent Bot Opt-In Option (When Human Match Times Out) -->
+                <div id="mm-bot-optin-box" class="mm-bot-optin-box" style="display: none;">
+                    <div class="mm-bot-optin-msg">No human opponent found in your rating bracket.</div>
+                    <div class="mm-bot-optin-actions">
+                        <button id="btn-mm-optin-bot" class="btn-mm-optin-action">Practice vs AI Bot</button>
+                        <button id="btn-mm-keep-searching" class="btn-mm-keep-action">Keep Searching</button>
                     </div>
                 </div>
 

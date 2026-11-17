@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.Fortivex" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@color/fortivex_status_bar</item>
+        <item name="android:navigationBarColor">@color/fortivex_nav_bar</item>
+        <item name="android:windowBackground">@color/fortivex_bg</item>
+        <item name="colorPrimary">@color/fortivex_primary</item>
+        <item name="colorSecondary">@color/fortivex_accent</item>
+    </style>
+</resources>

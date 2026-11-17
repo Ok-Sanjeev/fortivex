@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { FORTIVEX_RANKS, getRankBadgeSvg, getRankForRating } = require('./ranks.js');
 
 const DB_DIR = path.join(__dirname, 'db');
@@ -17,6 +18,7 @@ const USERS_FILE = path.join(DB_DIR, 'users.json');
 const MATCHES_FILE = path.join(DB_DIR, 'matches.json');
 const REPLAYS_FILE = path.join(DB_DIR, 'replays.json');
 const META_FILE = path.join(DB_DIR, 'meta.json');
+const SESSIONS_FILE = path.join(DB_DIR, 'sessions.json');
 
 // Ensure DB directory exists
 if (!fs.existsSync(DB_DIR)) {
@@ -75,6 +77,7 @@ class FortivexDB {
         this.users = safeReadJson(USERS_FILE, {});
         this.matches = safeReadJson(MATCHES_FILE, []);
         this.replays = safeReadJson(REPLAYS_FILE, {});
+        this.sessions = safeReadJson(SESSIONS_FILE, {});
         this.meta = safeReadJson(META_FILE, {
             nextUserId: 10101
         });
@@ -95,8 +98,82 @@ class FortivexDB {
         safeWriteJson(REPLAYS_FILE, this.replays);
     }
 
+    saveSessions() {
+        safeWriteJson(SESSIONS_FILE, this.sessions);
+    }
+
     saveMeta() {
         safeWriteJson(META_FILE, this.meta);
+    }
+
+    // ==========================================
+    // SECURE SESSION TOKEN MANAGEMENT
+    // ==========================================
+    createSession(userId) {
+        if (!userId) return null;
+        const token = 'fv_' + crypto.randomBytes(24).toString('hex');
+        this.sessions[token] = {
+            userId,
+            createdAt: Date.now(),
+            expiresAt: Date.now() + 30 * 86400000 // 30 days session
+        };
+        this.saveSessions();
+        return token;
+    }
+
+    validateSessionToken(token) {
+        if (!token || !this.sessions[token]) return null;
+        const session = this.sessions[token];
+        if (Date.now() > session.expiresAt) {
+            delete this.sessions[token];
+            this.saveSessions();
+            return null;
+        }
+        return this.getUser(session.userId);
+    }
+
+    invalidateSessionToken(token) {
+        if (token && this.sessions[token]) {
+            delete this.sessions[token];
+            this.saveSessions();
+            return true;
+        }
+        return false;
+    }
+
+    // ==========================================
+    // GOOGLE PLAY DATA SAFETY & ACCOUNT DELETION
+    // ==========================================
+    deleteUserAccount(userId) {
+        const user = this.getUser(userId);
+        if (!user) return { success: false, reason: 'User not found' };
+
+        // 1. Invalidate all active sessions for this user
+        for (const [token, sess] of Object.entries(this.sessions)) {
+            if (sess.userId === userId) {
+                delete this.sessions[token];
+            }
+        }
+        this.saveSessions();
+
+        // 2. Anonymize user records in archived matches (Data Minimization)
+        for (const match of this.matches) {
+            if (match.players) {
+                for (const p of match.players) {
+                    if (p.userId === userId) {
+                        p.username = 'Deleted Player';
+                        p.userId = null;
+                    }
+                }
+            }
+        }
+        this.saveMatches();
+
+        // 3. Delete user profile permanently
+        delete this.users[userId];
+        this.saveUsers();
+
+        return { success: true, message: 'Account and associated data deleted' };
     }
 
     // ==========================================
@@ -348,6 +425,8 @@ class FortivexDB {
         };
 
         this.users[userId] = user;
+        const sessionToken = this.createSession(userId);
+        user.sessionToken = sessionToken;
         this.saveUsers();
         return user;
     }
@@ -434,6 +513,9 @@ class FortivexDB {
                 user.username = clean;
                 user.displayName = clean;
             }
+        }
+        if (!user.sessionToken) {
+            user.sessionToken = this.createSession(user.id);
         }
         this.saveUsers();
         return user;
