@@ -22,8 +22,10 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.2'
 
       - name: Setup Node.js Environment
         uses: actions/setup-node@v4
@@ -31,7 +33,7 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Node Dependencies & Run Tests
+      - name: Install Node Dependencies & Run Verification Tests
         run: |
           npm ci || npm install
           npm test
@@ -41,13 +43,10 @@ jobs:
           mkdir -p android/app/src/main/assets
           cp -r index.html styles.css game.js ui.js audio.js ranks.js icons/ privacy.html manifest.json android/app/src/main/assets/ || true
 
-      - name: Grant Execute Permission for Gradlew
-        run: chmod +x android/gradlew
-
       - name: Build Android App Bundle (AAB) & APK
         working-directory: android
         run: |
-          ./gradlew bundleRelease assembleRelease --no-daemon
+          gradle bundleRelease assembleRelease --no-daemon --stacktrace
 
       - name: Upload Release Android App Bundle (.aab)
         uses: actions/upload-artifact@v4

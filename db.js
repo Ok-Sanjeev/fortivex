@@ -86,6 +86,17 @@ class FortivexDB {
             nextUserId: 10101
         });
 
+        // Optional Production PostgreSQL Adapter (active when DATABASE_URL is set)
+        try {
+            const FortivexPostgres = require('./db_postgres.js');
+            this.pg = new FortivexPostgres();
+            if (this.pg.isEnabled()) {
+                this.pg.init().catch(err => console.error('[PostgreSQL Init Warning]:', err.message));
+            }
+        } catch (e) {
+            this.pg = null;
+        }
+
         // Initialize and persist the 100 AI profiles
         this.initPersistentAiProfiles();
     }
@@ -124,12 +135,18 @@ class FortivexDB {
             persistedAt: Date.now()
         };
         this.saveActiveRooms();
+        if (this.pg && this.pg.isEnabled()) {
+            this.pg.saveActiveRoom(code, this.activeRooms[code]).catch(() => {});
+        }
     }
 
     removeActiveRoom(code) {
         if (code && this.activeRooms[code]) {
             delete this.activeRooms[code];
             this.saveActiveRooms();
+            if (this.pg && this.pg.isEnabled()) {
+                this.pg.removeActiveRoom(code).catch(() => {});
+            }
         }
     }
 
